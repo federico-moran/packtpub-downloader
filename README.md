@@ -40,7 +40,9 @@ Chrome works the same way (use `chrome://settings/...`).
 
 ### Human checks
 
-After a few hundred downloads Cloudflare may show *verify you are human* in the download tab. The script detects it and **pauses**: the library tab's title flashes and a **Continue** button appears. Complete the check in the download tab, then click Continue. The script retries that file.
+After a few hundred downloads Cloudflare may show *verify you are human* in the download tab. The script detects it and **pauses**: the library tab's title flashes and **Retry** / **Skip** buttons appear. Complete the check, close every tab except the library tab, then click Retry. The script retries that file.
+
+The check page also cuts the library tab's link to the download tab, so if the script carried on, each new download would open another tab with another check. Pausing on a tab it can no longer see prevents that.
 
 ### Resuming and fixing the record
 
