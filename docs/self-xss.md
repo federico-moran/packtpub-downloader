@@ -47,6 +47,43 @@ These are the controls that actually affected this project, which makes them goo
 3. **Behavioural rate limiting.** After roughly 200 downloads, Cloudflare started challenging the download tab, forcing a human back into the loop. Unattended bulk exfiltration stalled for 3½ hours.
 4. **The browser's paste warning.** Edge refused the first paste until the user typed `allow pasting`, a speed bump aimed directly at self-XSS.
 
+## Would an EDR catch it?
+
+Almost certainly not. An EDR (SentinelOne, Defender for Endpoint, CrowdStrike and similar) watches the **operating system**: processes, files, the registry, network connections. At that level, this script is normal browsing.
+
+| Activity | What the EDR sees | Suspicious? |
+| --- | --- | --- |
+| Pasting and running the script | Nothing. The JavaScript runs inside the browser's page process; the DevTools Console and the page are invisible to the EDR. | — |
+| 907 API calls | `msedge.exe` making HTTPS connections to a legitimate site | No |
+| 1,079 downloads | `msedge.exe` creating `.pdf`/`.epub` files in `Downloads` | No |
+| New processes, code injection, persistence, script engines | None | — |
+
+EDR detections are built on things like a process launching something unexpected (`winword → powershell`), code injection, credential access, persistence, and ransomware-style mass changes to existing files. This script does none of that. The most an EDR does here is:
+- **scan the downloaded files** as they're written (a malicious PDF could be caught there), and
+- **record file-creation events in its telemetry,** where a hunt might spot one browser process writing ~1,000 files in two hours. That's a hunt, not an alert.
+
+**The attacker's version is also mostly invisible.** A self-XSS payload that sends account data to an attacker's server is, to the endpoint, just the browser making another HTTPS request. The EDR might flag the destination through threat intelligence, but not the behaviour. That is a large part of why browser-only attacks appeal to attackers: they stay under the EDR. The trade-off is that the attacker is limited to what that one site allows.
+
+**ClickFix is different.** Once the victim pastes into the Run dialog, the attack leaves the browser:
+
+```
+explorer.exe → powershell.exe -enc <long base64> → downloads and runs payload
+```
+
+An unusual parent/child process chain, an encoded command line, and a newly written program being run are exactly what EDR is built to catch.
+
+**Takeaway:** EDR covers the endpoint, but a user's **logged-in browser session is largely a blind spot** for it. The browser and identity layers need controls of their own.
+
+### Protecting enterprise browsers: where to start
+
+- **Manage the browser as a platform.** Enforce policy through Group Policy or Intune (Edge for Business, Chrome Enterprise): approved browsers only, forced updates, sign-in tied to corporate identity.
+- **Control DevTools.** Set `DeveloperToolsAvailability = 2` for everyone except groups that need it (developers, IT). This removes the Console-paste attack path for most users.
+- **Control extensions.** Use an allowlist (`ExtensionInstallAllowlist` with `ExtensionInstallBlocklist = *`) and review extension permissions. A malicious extension has the same in-page power as a pasted script, permanently.
+- **Watch what happens inside the page.** Browser security tools (security extensions or enterprise browsers) can see script behaviour, pastes, data leaving the page and risky sites, which EDR can't.
+- **Network and data layer.** A secure web gateway or SSE/CASB for URL filtering, DLP on uploads, and download limits for sanctioned apps.
+- **Identity layer.** Conditional access (managed device, compliant browser), short session lifetimes, re-authentication for sensitive actions, and token protection or device-bound sessions where supported.
+- **Users.** Teach the one-line lesson below, and include ClickFix-style fake CAPTCHAs in phishing simulations.
+
 ## Defences, by layer
 
 **Browser / endpoint**
