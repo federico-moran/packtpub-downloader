@@ -8,7 +8,7 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 Create a folder used only for PacktPub files, for example:
 
-```
+```text
 C:\Users\<you>\Downloads\PacktPub
 ```
 
@@ -63,7 +63,6 @@ Keeping the library in its own folder means:
 | Edge closed while files were still downloading | Unfinished files were already marked done and would be skipped | Step 2 fixes this (unfinished `.crdownload` files aren't counted) |
 | Different browser, profile or PC, or site data cleared | The browser's record is gone, so the script would start from zero | Step 2 fixes this: the files on disk are the real record |
 | Any restart | Reading the library again takes ~5 minutes | Expected |
-
 
 ## 6. Verify
 
