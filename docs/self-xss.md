@@ -59,6 +59,7 @@ Almost certainly not. An EDR (SentinelOne, Defender for Endpoint, CrowdStrike an
 | New processes, code injection, persistence, script engines | None | — |
 
 EDR detections are built on things like a process launching something unexpected (`winword → powershell`), code injection, credential access, persistence, and ransomware-style mass changes to existing files. This script does none of that. The most an EDR does here is:
+
 - **scan the downloaded files** as they're written (a malicious PDF could be caught there), and
 - **record file-creation events in its telemetry,** where a hunt might spot one browser process writing ~1,000 files in two hours. That's a hunt, not an alert.
 
@@ -66,7 +67,7 @@ EDR detections are built on things like a process launching something unexpected
 
 **ClickFix is different.** Once the victim pastes into the Run dialog, the attack leaves the browser:
 
-```
+```text
 explorer.exe → powershell.exe -enc <long base64> → downloads and runs payload
 ```
 
