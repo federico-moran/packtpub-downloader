@@ -136,6 +136,16 @@ Possible refinements:
 
 For scale: at 3 s per file, the ~1,080-file library takes about 55 minutes instead of about 90, not counting the ~5-minute reading phase at the start of each run.
 
+### Clean stop and faster restarts
+
+Today the only way to stop is to close or reload the library tab, and every restart re-reads all 907 titles (~5 minutes). See the playbook's *Stopping and resuming* section for the current workaround.
+
+- **Stop / Pause button:** a small fixed panel on the library page with **Pause**, **Resume** and **Stop**. Pause and Stop take effect *after* the current file's check completes, so no file is left half-recorded. Stop prints a summary (done, failed, remaining). This reuses the overlay code already written for the human-check pause.
+- **Reuse the library list:** cache the title list and file links (in `localStorage`, or the dry-run `packt-library.json` pasted back in, like `set-done.js`). A restart then skips straight to downloading. Add a `REFRESH_LIBRARY = true` setting, or refresh automatically when the cache is older than N days, so new purchases are still picked up.
+- **Record only confirmed files:** once the manifest exists (Part 1), generate the done list from it on every resume instead of relying on the browser's "started" record. This removes the Edge-closed-mid-download gap entirely.
+
+## Alternative: Calibre
+
 [Calibre](https://calibre-ebook.com) already:
 
 - reads the title and author embedded in EPUB and PDF files,
