@@ -79,6 +79,38 @@ The book-list API (`/api/entitlements/users/me/owned`, field `simplifiedProduct`
 
 Authors come back only as IDs, so names would need another endpoint. That isn't investigated yet.
 
+## Candidate features
+
+### ISBN check-digit validation
+
+An ISBN-13 is made up of the prefix (`978`/`979`), a registration group (`1` = English), a publisher code (Packt holds several blocks such as `1-78…`, `1-80…`, `1-83…`, `1-84…`), a title number, and a **check digit**.
+
+The check digit is calculated from the first 12 digits: weight them alternately 1 and 3, sum them, and the check digit is `(10 − sum mod 10) mod 10`. The manifest tool can check this for every file:
+
+- A mismatch means the name isn't a real ISBN (damaged, mistyped, or renamed wrongly). Flag it, just like a failed format check.
+- It costs nothing and needs no network access.
+
+### Acquisition order and bundles
+
+The book list is sorted by **when each title was acquired**, not by ISBN, and it shows clear subject runs (about 40 Raspberry Pi books together, then Splunk, Wireshark, forensics, OpenStack, 3D printing). Within a run the ISBNs are unrelated, which points to **themed bundles bought at once**.
+
+The API already returns what's needed to record this:
+
+| Field | Use |
+| --- | --- |
+| `createdAt` | When the title was added to the account; titles added within minutes of each other are likely one bundle |
+| `entitlementSource` / `entitlementLink` | How it was acquired (e.g. `Vouchers`) and a reference that may group a bundle |
+| `simplifiedProduct.category` | PacktPub's own subject category |
+| `simplifiedProduct.publicationDate` | Publication date |
+
+Saving these in the dry run (`packt-library.json`) and carrying them into the manifest would allow:
+
+- **Grouping by bundle or by category,** for example folders such as `Security/`, `Raspberry Pi/` or `2019-03 bundle/` in a reading copy.
+- **Sorting by publication date,** which is what nearby ISBNs roughly reflect: publishers assign title numbers in sequence as books go into production, so close ISBNs usually mean close release dates. Older `97817…`/`97818…` titles are mostly 2013–2019, while `978180…`/`978183…` are 2020 onwards.
+- **Spotting what's new** since the last run, from `createdAt`.
+
+Open question: whether `entitlementLink` actually identifies a bundle or voucher batch. That needs checking against a few known purchases.
+
 ## Alternative: Calibre
 
 [Calibre](https://calibre-ebook.com) already:
@@ -103,3 +135,4 @@ Possible split: **these tools own the manifest** (what you have, and is it intac
 1. Part 1: manifest and format check. `set-done.js` is generated from it.
 2. Decide on Calibre versus Part 2.
 3. Part 3 only if the metadata turns out to be useful.
+4. Candidate features: the ISBN check can go straight into Part 1. Acquisition and bundle grouping depend on Part 3's metadata.
