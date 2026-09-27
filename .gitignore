@@ -1,0 +1,10 @@
+# Personal data: generated from your own downloads folder / library
+browser/set-done.js
+packt-library*.json
+
+# Editor / OS
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+.DS_Store
