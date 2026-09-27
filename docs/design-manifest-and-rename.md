@@ -5,6 +5,7 @@
 ## Background
 
 Today the downloader tracks progress in Edge's `localStorage` (key `packtDownloaderDone`), recording each file when its download *starts*. That record is:
+
 - tied to one browser profile,
 - lost if site data is cleared,
 - wrong whenever a download is blocked (for example the 3½-hour Cloudflare gap described in [how-we-got-here.md](how-we-got-here.md)).
@@ -42,16 +43,19 @@ A file kept **inside the library folder** (e.g. `Downloads\PacktPub\manifest.csv
 | `title` | From `packt-library.json`, if available |
 
 **Tool:** `tools/Update-Manifest.ps1 -Folder <library>`
+
 - Scans the folder, adds new files, updates changed ones, and flags missing ones. Running it twice with no changes does nothing.
 - Hashes with `Get-FileHash -Algorithm SHA256`.
 - Generates `browser/set-done.js` from the manifest. This replaces the file-name parsing in `New-SetDone.ps1`, so names no longer need to contain only the ISBN.
 
 **Format check.** PacktPub publishes no reference hashes, so a hash can't prove a first download is correct. Check the file content instead:
+
 - **PDF:** the first bytes are `%PDF`.
 - **EPUB:** a zip file (starts with `PK`) whose first entry is `mimetype` containing `application/epub+zip`.
 - Anything else, especially HTML, is marked `valid = false` and left out of the done list, so the next run downloads it again.
 
 **What the hash is for:**
+
 - Removing duplicates: `… (1).pdf` with the same hash as the original can be deleted.
 - Verifying backups and e-reader copies against the manifest.
 - Noticing when PacktPub updates a book (a new hash on re-download).
@@ -133,6 +137,7 @@ Possible refinements:
 For scale: at 3 s per file, the ~1,080-file library takes about 55 minutes instead of about 90, not counting the ~5-minute reading phase at the start of each run.
 
 [Calibre](https://calibre-ebook.com) already:
+
 - reads the title and author embedded in EPUB and PDF files,
 - can look up metadata and covers by ISBN,
 - organises books as `Author/Title/`,

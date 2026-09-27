@@ -13,6 +13,7 @@ C:\Users\<you>\Downloads\PacktPub
 ```
 
 Keeping the library in its own folder means:
+
 - **Easy to move:** copy one folder to your e-reader or tablet.
 - **Easy to back up:** archive one folder, with nothing else mixed in.
 - **Easy to check:** the resume tool ([`tools/New-SetDone.ps1`](../tools/New-SetDone.ps1)) and the file counts in step 6 assume every file in that folder came from PacktPub.
