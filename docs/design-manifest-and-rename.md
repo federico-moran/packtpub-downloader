@@ -1,0 +1,105 @@
+# Design: library manifest and human-readable file names
+
+**Status:** Proposed. Not started; to pick up after the first full download is complete.
+
+## Background
+
+Today the downloader tracks progress in Edge's `localStorage` (key `packtDownloaderDone`), recording each file when its download *starts*. That record is:
+- tied to one browser profile,
+- lost if site data is cleared,
+- wrong whenever a download is blocked (for example the 3½-hour Cloudflare gap described in [how-we-got-here.md](how-we-got-here.md)).
+
+In practice the real record became the download folder itself: files are named `<isbn>.pdf` / `<isbn>.epub`, and [`tools/New-SetDone.ps1`](../tools/New-SetDone.ps1) rebuilds the browser record from those names.
+
+Separately, ISBN file names are hard to browse on an e-reader or in a backup.
+
+## Goals
+
+1. A **persistent, portable record** of what has been downloaded, stored with the files and trusted over `localStorage`.
+2. **Detect bad files:** error pages saved under a book name, truncated downloads, duplicates, and later corruption in backups or device copies.
+3. **Readable file names,** produced deterministically (same inputs give the same names) and reversibly.
+4. Optionally, **richer metadata** per book (subtitle, publication date, category).
+
+## Non-goals
+
+- Changing how the browser script downloads files.
+- Fetching metadata from third-party services (the rename step must work offline).
+- Editing metadata *inside* the EPUB or PDF files.
+
+## Part 1: the manifest
+
+A file kept **inside the library folder** (e.g. `Downloads\PacktPub\manifest.csv`), so it travels with every copy and backup.
+
+| Column | Meaning |
+| --- | --- |
+| `isbn` | 13-digit ISBN (PacktPub product ID) |
+| `format` | `pdf` or `epub` |
+| `file` | Current file name (changes if renamed) |
+| `bytes` | File size |
+| `sha256` | Content hash |
+| `valid` | Result of the format check (see below) |
+| `added` | When the file was first recorded |
+| `title` | From `packt-library.json`, if available |
+
+**Tool:** `tools/Update-Manifest.ps1 -Folder <library>`
+- Scans the folder, adds new files, updates changed ones, and flags missing ones. Running it twice with no changes does nothing.
+- Hashes with `Get-FileHash -Algorithm SHA256`.
+- Generates `browser/set-done.js` from the manifest. This replaces the file-name parsing in `New-SetDone.ps1`, so names no longer need to contain only the ISBN.
+
+**Format check.** PacktPub publishes no reference hashes, so a hash can't prove a first download is correct. Check the file content instead:
+- **PDF:** the first bytes are `%PDF`.
+- **EPUB:** a zip file (starts with `PK`) whose first entry is `mimetype` containing `application/epub+zip`.
+- Anything else, especially HTML, is marked `valid = false` and left out of the done list, so the next run downloads it again.
+
+**What the hash is for:**
+- Removing duplicates: `… (1).pdf` with the same hash as the original can be deleted.
+- Verifying backups and e-reader copies against the manifest.
+- Noticing when PacktPub updates a book (a new hash on re-download).
+
+## Part 2: rename to titles
+
+**Tool:** `tools/Rename-Library.ps1 -Folder <library> -Library packt-library.json [-Apply]`
+
+- **Input:** `packt-library.json` from the dry run (ISBN → title). No network access, so the result is deterministic.
+- **Name format:** `<Title> [<isbn>].<ext>`, e.g. `Learn Wireshark - Second Edition [9781803231679].pdf`.
+  - The ISBN stays in the name because titles aren't unique (multiple editions, and "Learning Python" as both a book and a video course). It also keeps files traceable if the manifest is lost.
+- **Cleaning:**
+  - Replace Windows-invalid characters `< > : " / \ | ? *`.
+  - Repair PacktPub's encoding damage (`???` → `'`, `–` or `—`, as appropriate).
+  - Collapse duplicated suffixes (`Second Edition - Second Edition`).
+  - Trim trailing dots and spaces, and cap the length for Windows path limits.
+- **Safety:**
+  - Without `-Apply`, it only prints the plan (old → new).
+  - With `-Apply`, it renames, updates the manifest's `file` column, and writes `rename-log.csv` for undoing.
+  - Files already renamed are skipped, so it's safe to re-run.
+
+## Part 3: metadata (optional)
+
+The book-list API (`/api/entitlements/users/me/owned`, field `simplifiedProduct`) already returns subtitle, publication date, category, length, type, and ISBNs for related formats. The dry run could save these into `packt-library.json`, and the manifest could carry the useful ones.
+
+Authors come back only as IDs, so names would need another endpoint. That isn't investigated yet.
+
+## Alternative: Calibre
+
+[Calibre](https://calibre-ebook.com) already:
+- reads the title and author embedded in EPUB and PDF files,
+- can look up metadata and covers by ISBN,
+- organises books as `Author/Title/`,
+- syncs to most e-readers.
+
+It can be scripted with `calibredb add` and `ebook-meta`.
+
+Possible split: **these tools own the manifest** (what you have, and is it intact), and **Calibre owns presentation** (names, covers, device sync). If Calibre is adopted, Part 2 may be unnecessary.
+
+## Open questions
+
+- CSV or JSON for the manifest? CSV is easy to open in Excel; JSON handles nested metadata better.
+- Rename in place, or copy into a separate "reading" folder and leave the ISBN-named originals untouched?
+- Calibre, custom rename, or both?
+- Should the browser script read the manifest directly (pasted like `set-done.js`), or keep the generated `set-done.js`?
+
+## Suggested order
+
+1. Part 1: manifest and format check. `set-done.js` is generated from it.
+2. Decide on Calibre versus Part 2.
+3. Part 3 only if the metadata turns out to be useful.
