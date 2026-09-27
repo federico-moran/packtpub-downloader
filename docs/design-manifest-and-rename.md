@@ -111,7 +111,26 @@ Saving these in the dry run (`packt-library.json`) and carrying them into the ma
 
 Open question: whether `entitlementLink` actually identifies a bundle or voucher batch. That needs checking against a few known purchases.
 
-## Alternative: Calibre
+### Adjustable download pacing
+
+Today one setting, `DELAY_MS` (5,000 ms), does two jobs: it's the pause between downloads, *and* it's how long the script waits before checking the download tab for a human check or error page. That ties "how fast" to "how reliably failures are noticed".
+
+Measured in the first full run: 5.1 s per file, so the pause, not the connection, set the pace. About 200 downloads in, Cloudflare started showing human checks.
+
+Proposal:
+
+| Setting | Meaning | Suggested default | Lower limit |
+| --- | --- | --- | --- |
+| `CHECK_AFTER_MS` | How long to wait after opening a link before looking at the download tab | 3,000 | ~2,500. Any shorter and a slow-loading check page can be mistaken for a successful download, which brings back silently skipped files. |
+| `DELAY_MS` | Total pause between starting one download and the next (includes `CHECK_AFTER_MS`) | 5,000 | 3,000 |
+
+Possible refinements:
+
+- **Poll instead of a fixed wait:** look at the tab every 500 ms until a page appears or `CHECK_AFTER_MS` runs out. Failures are noticed sooner, and a successful download costs no extra time.
+- **Back off after a human check:** after each check, raise `DELAY_MS` (e.g. ×1.5, up to a maximum), and ease it back down only after a long stretch with no checks. The aim is to stay under the rate that triggers checks, being gentler on the site and needing fewer manual steps. It is not about hiding from detection: the checks are still passed by a person.
+- **Print an ETA** after each file, based on the measured seconds per file.
+
+For scale: at 3 s per file, the ~1,080-file library takes about 55 minutes instead of about 90, not counting the ~5-minute reading phase at the start of each run.
 
 [Calibre](https://calibre-ebook.com) already:
 - reads the title and author embedded in EPUB and PDF files,
@@ -135,4 +154,4 @@ Possible split: **these tools own the manifest** (what you have, and is it intac
 1. Part 1: manifest and format check. `set-done.js` is generated from it.
 2. Decide on Calibre versus Part 2.
 3. Part 3 only if the metadata turns out to be useful.
-4. Candidate features: the ISBN check can go straight into Part 1. Acquisition and bundle grouping depend on Part 3's metadata.
+4. Candidate features: the ISBN check can go straight into Part 1. Acquisition and bundle grouping depend on Part 3's metadata. Adjustable pacing is independent and only touches the browser script.
