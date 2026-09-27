@@ -2,7 +2,7 @@
 
 Downloads every ebook you own on [PacktPub](https://subscription.packtpub.com) (PDF and/or EPUB), from inside your own logged-in browser session.
 
-It is also a small case study in **self-XSS**: the same technique that makes this script work is what attackers use when they talk a victim into pasting code into their browser. See [docs/self-xss.md](docs/self-xss.md).
+It is also a small case study in **self-XSS**: the same technique that makes this script work is what attackers use when they talk a victim into pasting code into their browser. See [docs/self-xss.md](docs/self-xss.md). For the story of how it was built, dead ends included, see [docs/how-we-got-here.md](docs/how-we-got-here.md).
 
 ## Why a browser script?
 
