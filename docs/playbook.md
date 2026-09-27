@@ -4,6 +4,8 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 **Time needed:** about 10 minutes of setup, then about 90 minutes of mostly unattended running for a library of ~1,000 files. Stay within earshot for the occasional human check.
 
+> **Where I left off (2026-09-27, 07:32):** the first full run was stopped on purpose at **769 of 1,079** files in `Downloads\PacktPub`. Setup (steps 1–4) is done and Edge is still configured. **To continue, follow [Stopping and resuming → To resume](#stopping-and-resuming).** The script now has the Retry/Skip pause for human checks, but it hasn't been tested against a real check yet, so watch the first one.
+
 ## 1. Prepare a dedicated folder
 
 Create a folder used only for PacktPub files, for example:
@@ -49,13 +51,27 @@ Keeping the library in its own folder means:
 
 ### Stopping and resuming
 
-**To stop:** close the library tab (the one running the script), or reload it. The script stops at once.
+**To stop** (e.g. before shutting down):
+
+1. Close the library tab (the one with the Console). The script stops at once.
+2. Press **Ctrl+J** and wait until nothing is still downloading, usually a few seconds. (If you don't wait, the resume steps catch unfinished files anyway.)
+3. Close Edge and shut down. Leave Edge's download folder and pop-up settings as they are until the whole library is done.
 
 **To resume** (minutes or days later):
 
-1. Wait until **Ctrl+J** shows no downloads in progress, if you're still at the same PC.
-2. Rebuild the record from disk: `.\tools\New-SetDone.ps1`, then paste `browser/set-done.js` into the Console on the library page. This is the safe habit whatever happened while you were away.
-3. Paste the downloader (`DRY_RUN = false`) and run it. Only missing files are downloaded.
+1. **Rebuild the record from disk.** Open a PowerShell terminal in the project folder (VS Code's terminal works) and run:
+
+   ```powershell
+   .\tools\New-SetDone.ps1
+   ```
+
+   Note the number it prints: `N files recorded`. If Windows says running scripts is disabled, use `powershell -ExecutionPolicy Bypass -File .\tools\New-SetDone.ps1` instead.
+2. **Open Edge**, log in, go to `https://subscription.packtpub.com/owned`, and press **F12 → Console**.
+3. **Paste all of `browser/set-done.js`** (the file step 1 just created; copy it from VS Code) and press Enter. It prints `undefined`, which is normal. This replaces the browser's record with what's actually on disk.
+4. **Open `browser/packt-downloader.js`**, change `DRY_RUN = true` to `DRY_RUN = false` (the repo copy defaults to a dry run), check `MAX_DOWNLOADS = Infinity`, save, copy all of it, paste it into the Console and press Enter.
+5. **Check the numbers.** After the ~5-minute reading phase, the Console prints `Planned: 1079 files ... Already done: X. This run: Y.` **X should equal N** from step 1, and Y should be 1,079 − N. If X is 0 or far off, close the tab and repeat from step 2.
+6. **If a human check appears,** use the **Retry / Skip** screen: complete the check, close every tab except the library tab, then click **Retry**. If no pause screen appears and new check tabs keep opening, handle them by hand as before, then report it (the fix hasn't been tested yet).
+7. **When the Console prints `Finished`,** go to [step 6. Verify](#6-verify): `New-SetDone.ps1` should report **1,079** (or a few more if there are `(1)` duplicates).
 
 | Situation | What happens | What to do |
 | --- | --- | --- |
