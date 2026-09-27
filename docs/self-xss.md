@@ -88,12 +88,14 @@ An unusual parent/child process chain, an encoded command line, and a newly writ
 ### First two steps: the most risk reduced for the least effort
 
 **1. Find out who actually needs DevTools.**
+
 - List the groups that genuinely use it: developers, QA, web/IT support, security. Everyone else is a candidate for `DeveloperToolsAvailability = 2`.
 - Assign the policy by group (Intune configuration profile or GPO), with the exempt groups excluded, and a simple exception request process.
 - Pilot with one department first. The policy has no audit-only mode, so the pilot is how you find people who rely on DevTools without knowing it (for example, support staff who clear site data or read errors in the Console).
 - Check that it applied on a test machine at `edge://policy` (or `chrome://policy`).
 
 **2. Take an inventory of installed browser extensions.**
+
 - Use the reporting you already have. Depending on your tools, that may be your browser management console (e.g. Microsoft Edge management or Chrome Browser Cloud Management extension reports) or Microsoft Defender Vulnerability Management's browser-extension inventory. Failing that, a script can read extension folders on disk (`%LOCALAPPDATA%\Microsoft\Edge\User Data\<profile>\Extensions`).
 - Rank extensions by **permissions and reach**: "read and change all your data on all websites", access to cookies, the ability to inject scripts. Also note how many users have each one.
 - Build the allowlist from what's actually used and justified, then enforce it: `ExtensionInstallBlocklist = *` plus `ExtensionInstallAllowlist`, and optionally `ExtensionInstallForcelist` for required ones.
@@ -104,12 +106,14 @@ Together these close off the two easiest ways for someone else's code to run ins
 ## Defences, by layer
 
 **Browser / endpoint**
+
 - Leave the paste warning on, and teach users what it means.
 - For users who don't need DevTools, set the `DeveloperToolsAvailability` policy to `2` (Edge/Chrome, via Group Policy or Intune). This is the strongest single control against console-paste attacks.
 - ClickFix: remove the Run dialog (`NoRun`) where you can, use PowerShell Constrained Language Mode with AppLocker/WDAC, and block `mshta` and similar built-in tools.
 - Session and download controls (e.g. Defender for Cloud Apps session policies, or an enterprise browser) to cap bulk downloads.
 
 **Application**
+
 - **HttpOnly** session cookies. This stops token theft, but not abuse within the session.
 - A strict **CSP `connect-src`**. Console code obeys the page's CSP for `fetch`/XHR, which limits where data can be sent (navigations and some beacons can still leak).
 - **Step-up authentication** (password or MFA) for sensitive actions. A pasted script can't answer an MFA prompt.
@@ -118,6 +122,7 @@ Together these close off the two easiest ways for someone else's code to run ins
 - Device Bound Session Credentials limit cookie *replay* elsewhere, but not abuse inside the victim's browser.
 
 **Detection ideas**
+
 - API call patterns that don't match the UI, e.g. `/api/product/<isbn>/files` for 907 titles in minutes with no product-page views.
 - Requests at a perfectly regular rhythm (this script: one every 5 seconds, for hours).
 - Missing app-specific headers (CSRF tokens, app version, request IDs) that the real front end always sends.
