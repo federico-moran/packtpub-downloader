@@ -7,6 +7,7 @@ This project was built in one long session with an AI coding agent (Claude Code)
 The starting point was [lmbringas/packtpub-downloader](https://github.com/lmbringas/packtpub-downloader), a Python script from about 2019. It logged in to PacktPub's REST API (`services.packtpub.com`), listed your books a page at a time, and downloaded each file with `requests`.
 
 The first request to the agent was simply *"explore this repo."* It read every file and reported bugs:
+
 - The token refresh was broken in two places.
 - `download_book` used a variable that was never defined.
 - Book titles weren't cleaned for characters Windows doesn't allow in file names.
@@ -63,6 +64,7 @@ It runs as a dry run first, then a single-file test, and only then the full run.
 The server was almost certainly checking **Fetch Metadata headers** (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`), a real defence that lets an endpoint tell script requests from user actions (see [self-xss.md](self-xss.md)). The user's own manual click working was the control case that separated "my script is wrong" from "my session is wrong."
 
 Two smaller problems followed:
+
 - **Pop-ups blocked.** A one-line `window.open` test typed in the Console worked, because Edge allows a pop-up right after the user presses Enter. The script's first download came minutes later and was blocked. The fix: allow pop-ups for the site.
 - **A settings edit caught in review.** Between runs, the formats line had been widened to include `mobi`, `video` and `code`. The user had asked for PDF and EPUB only, and video courses can be several gigabytes each. A "check the code again" review caught it before the full run.
 
@@ -80,6 +82,7 @@ The file creation times told the story:
 | 06:25–06:29 | 192–243 | Back to normal after the user passed the check |
 
 Two fixes:
+
 1. **Detect and pause.** Before each file, the download tab is reset to `about:blank`. A successful download leaves it blank; a page appearing means something went wrong. If that page is the Cloudflare check, the script pauses, flashes the tab title, and waits for a **Continue** click after the user has passed the check. It never tries to solve the check itself.
 2. **Trust the disk, not the log.** The files are named `<isbn>.<ext>`, so the correct "done" record could be rebuilt from the folder itself. That became [`tools/New-SetDone.ps1`](../tools/New-SetDone.ps1).
 
@@ -90,6 +93,7 @@ Two fixes:
 ## 8. Cleanup
 
 With a working tool, the repository was rebuilt as the user's own:
+
 - The old Python and Docker files were removed.
 - The history was restarted, with credit to the original project.
 - Personal data (the library list and the rebuilt resume record) was git-ignored.
@@ -98,6 +102,7 @@ With a working tool, the repository was rebuilt as the user's own:
 ## Takeaways
 
 **Coding with agents**
+
 - Check the assumption everything depends on first (step 0), before fixing anything.
 - Use read-only probes and dry runs before making changes, and one-file tests before full runs.
 - Change code only in response to evidence: every change here followed a specific observed failure.
@@ -105,6 +110,7 @@ With a working tool, the repository was rebuilt as the user's own:
 - Review the code before a big run, even when you trust it.
 
 **Security**
+
 - The same Console access that made this tool possible is the self-XSS attack surface.
 - Defences we ran into firsthand: bot management, Fetch Metadata enforcement, behavioural rate limiting, and the browser's paste warning.
 - In an investigation, the files and their timestamps are better evidence than what a program says it did.
