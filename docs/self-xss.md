@@ -85,6 +85,22 @@ An unusual parent/child process chain, an encoded command line, and a newly writ
 - **Identity layer.** Conditional access (managed device, compliant browser), short session lifetimes, re-authentication for sensitive actions, and token protection or device-bound sessions where supported.
 - **Users.** Teach the one-line lesson below, and include ClickFix-style fake CAPTCHAs in phishing simulations.
 
+### First two steps: the most risk reduced for the least effort
+
+**1. Find out who actually needs DevTools.**
+- List the groups that genuinely use it: developers, QA, web/IT support, security. Everyone else is a candidate for `DeveloperToolsAvailability = 2`.
+- Assign the policy by group (Intune configuration profile or GPO), with the exempt groups excluded, and a simple exception request process.
+- Pilot with one department first. The policy has no audit-only mode, so the pilot is how you find people who rely on DevTools without knowing it (for example, support staff who clear site data or read errors in the Console).
+- Check that it applied on a test machine at `edge://policy` (or `chrome://policy`).
+
+**2. Take an inventory of installed browser extensions.**
+- Use the reporting you already have. Depending on your tools, that may be your browser management console (e.g. Microsoft Edge management or Chrome Browser Cloud Management extension reports) or Microsoft Defender Vulnerability Management's browser-extension inventory. Failing that, a script can read extension folders on disk (`%LOCALAPPDATA%\Microsoft\Edge\User Data\<profile>\Extensions`).
+- Rank extensions by **permissions and reach**: "read and change all your data on all websites", access to cookies, the ability to inject scripts. Also note how many users have each one.
+- Build the allowlist from what's actually used and justified, then enforce it: `ExtensionInstallBlocklist = *` plus `ExtensionInstallAllowlist`, and optionally `ExtensionInstallForcelist` for required ones.
+- Watch for extensions that change owner or add permissions in an update. Hijacked or sold extensions are a known supply-chain route.
+
+Together these close off the two easiest ways for someone else's code to run inside a user's logged-in session: a pasted script and an installed extension.
+
 ## Defences, by layer
 
 **Browser / endpoint**
