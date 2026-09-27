@@ -3,7 +3,7 @@
 // One-time Edge setup (your normal Edge - no special launch command needed):
 //   - Allow pop-ups for the site: edge://settings/content/popups > Allow > Add > https://subscription.packtpub.com
 //   - Downloads: edge://settings/downloads > turn off "Ask me what to do with each download",
-//     and set Location to the folder you want (e.g. Downloads\PacktPub).
+//     and set Location to a dedicated folder (e.g. Downloads\PacktPub). See docs/playbook.md.
 //   - The first time you paste into the Console, Edge asks you to type "allow pasting".
 //
 // How to use:

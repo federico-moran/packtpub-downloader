@@ -18,9 +18,12 @@ Instead of fighting the bot check, this version runs **in the page itself**, via
 
 ## Setup (one time, Microsoft Edge)
 
-1. **Allow pop-ups** for the site: `edge://settings/content/popups` → Allow → Add → `https://subscription.packtpub.com`
-2. **Downloads**: `edge://settings/downloads` → turn off *Ask me what to do with each download*, and set *Location* to the folder you want (e.g. `Downloads\PacktPub`).
-3. The first time you paste into the Console, Edge asks you to type `allow pasting`. That warning exists because of the attack described in [docs/self-xss.md](docs/self-xss.md), so read what you paste.
+For the full run checklist (folder setup, verification, moving to your reader, backup), see the **[playbook](docs/playbook.md)**.
+
+1. **Create a dedicated folder** for the library, e.g. `Downloads\PacktPub`, so the files are easy to move to a reading device, back up, and verify.
+2. **Allow pop-ups** for the site: `edge://settings/content/popups` → Allow → Add → `https://subscription.packtpub.com`
+3. **Downloads**: `edge://settings/downloads` → turn off *Ask me what to do with each download*, and set *Location* to that folder. This applies to all Edge downloads, so switch it back after the run.
+4. The first time you paste into the Console, Edge asks you to type `allow pasting`. That warning exists because of the attack described in [docs/self-xss.md](docs/self-xss.md), so read what you paste.
 
 Chrome works the same way (use `chrome://settings/...`).
 
