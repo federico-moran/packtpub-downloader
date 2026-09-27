@@ -47,7 +47,23 @@ Keeping the library in its own folder means:
 3. **If a human check appears,** the library tab's title flashes *⚠ Verify you are human* and a **Continue** button appears. Complete the check in the download tab, then click **Continue**.
 4. The run is finished when the Console prints `Finished: ...`. Any files listed as *failed* weren't marked done, so running the script again retries them.
 
-**If the run is interrupted** (tab closed, PC restarted), just repeat step 5. Files already started are skipped.
+### Stopping and resuming
+
+**To stop:** close the library tab (the one running the script), or reload it. The script stops at once.
+
+**To resume** (minutes or days later):
+
+1. Wait until **Ctrl+J** shows no downloads in progress, if you're still at the same PC.
+2. Rebuild the record from disk: `.\tools\New-SetDone.ps1`, then paste `browser/set-done.js` into the Console on the library page. This is the safe habit whatever happened while you were away.
+3. Paste the downloader (`DRY_RUN = false`) and run it. Only missing files are downloaded.
+
+| Situation | What happens | What to do |
+| --- | --- | --- |
+| Stopped while a file was being opened | It isn't marked done yet, so it's retried. If it had already downloaded, you get a harmless `(1)` duplicate. | Nothing, or delete the duplicate |
+| Edge closed while files were still downloading | Unfinished files were already marked done and would be skipped | Step 2 fixes this (unfinished `.crdownload` files aren't counted) |
+| Different browser, profile or PC, or site data cleared | The browser's record is gone, so the script would start from zero | Step 2 fixes this: the files on disk are the real record |
+| Any restart | Reading the library again takes ~5 minutes | Expected |
+
 
 ## 6. Verify
 
