@@ -44,7 +44,7 @@ Keeping the library in its own folder means:
 
 1. Set `MAX_DOWNLOADS = Infinity`, then paste and run it again.
 2. Leave both tabs open: the library tab running the script, and the download tab it opens.
-3. **If a human check appears,** the library tab's title flashes *⚠ Verify you are human* and a **Continue** button appears. Complete the check in the download tab, then click **Continue**.
+3. **If a human check appears,** the library tab's title flashes *⚠ Verify you are human* and **Retry** / **Skip** buttons appear. Complete the check in the download tab, **close every other tab except the library tab**, then click **Retry**.
 4. The run is finished when the Console prints `Finished: ...`. Any files listed as *failed* weren't marked done, so running the script again retries them.
 
 ### Stopping and resuming

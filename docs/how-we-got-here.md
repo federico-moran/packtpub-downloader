@@ -86,6 +86,8 @@ Two fixes:
 1. **Detect and pause.** Before each file, the download tab is reset to `about:blank`. A successful download leaves it blank; a page appearing means something went wrong. If that page is the Cloudflare check, the script pauses, flashes the tab title, and waits for a **Continue** click after the user has passed the check. It never tries to solve the check itself.
 2. **Trust the disk, not the log.** The files are named `<isbn>.<ext>`, so the correct "done" record could be rebuilt from the folder itself. That became [`tools/New-SetDone.ps1`](../tools/New-SetDone.ps1).
 
+**The first real check showed the pause didn't work.** The check page cuts the link between the library tab and the download tab: it sends a `Cross-Origin-Opener-Policy` header, which puts it in a separate browsing context. The script then couldn't look into the tab at all, read "can't see anything" as "nothing went wrong", and carried on. Each following download opened a *new* tab, each with its own check, until the user had cleared them all and closed the extra tabs. The fix was to treat a tab the script can no longer see like a human check, and to add **Retry** and **Skip** buttons. The earlier version had only been tested for the case the agent expected (a check page it could read), never against a real check.
+
 **Lesson (security):** a script's log is only what it *believed* happened. Timestamps on the actual artefacts showed the real timeline, including the 3½-hour gap.
 
 **Lesson (agents):** "marked done when started" was a shortcut the agent took knowingly, and it failed exactly as the agent had warned it might. Recording a result as success before it's confirmed is a common source of bugs, whoever writes the code.

@@ -12,7 +12,7 @@
 //   3. It starts as a dry run (DRY_RUN = true): it lists what would be downloaded and saves packt-library.json.
 //   4. Set DRY_RUN = false (and MAX_DOWNLOADS = 1 for a first test) and run again.
 //   5. If Cloudflare's "verify you are human" check appears, the script pauses: complete the check
-//      in the download tab, then click Continue on the library page.
+//      in the download tab, close every other tab, then click Retry on the library page.
 //
 // Already-downloaded files are remembered in this site's localStorage, so re-running resumes.
 // To forget that history:  localStorage.removeItem('packtDownloaderDone')
@@ -106,19 +106,38 @@
   // So each link is opened in one reused tab (allow pop-ups for this site) and the server picks the
   // file name (<isbn>.<ext>). The tab is reset to about:blank first: a download leaves it there,
   // while Cloudflare's "verify you are human" check or an error page replaces it with a page.
+  // The check page also cuts this page's link to the tab (Cross-Origin-Opener-Policy): the tab then
+  // reads as closed or can't be inspected, and the next window.open() creates a new tab. So a tab
+  // we can no longer see is treated like a check, not like a successful download.
   const isChallenge = doc =>
     /just a moment/i.test(doc.title) || !!doc.querySelector('script[src*="challenge-platform"], #challenge-form');
 
-  // Pause until the person has passed the check and clicks Continue on this page.
+  // 'ok' (still blank: the link became a download), 'challenge', 'page' (some other page), or
+  // 'lost' (tab closed or cut off - almost always the human check).
+  const tabState = win => {
+    try {
+      if (win.closed) return 'lost';
+      if (win.location.href === 'about:blank') return 'ok';
+      return isChallenge(win.document) ? 'challenge' : 'page';
+    } catch {
+      return 'lost';
+    }
+  };
+
+  // Pause until the person has passed the check. Resolves 'retry' or 'skip'.
   const waitForHuman = () => new Promise(resolve => {
     const box = document.createElement('div');
     box.style.cssText = 'position:fixed;inset:0;z-index:2147483647;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center';
-    box.innerHTML = '<div style="background:#fff;color:#000;padding:24px 28px;border-radius:8px;font:16px system-ui;max-width:420px">'
-      + '<b>Downloads paused</b><p>Switch to the download tab, complete the "verify you are human" check, then come back and click Continue.</p>'
-      + '<button style="font:inherit;padding:6px 16px">Continue</button></div>';
+    box.innerHTML = '<div style="background:#fff;color:#000;padding:24px 28px;border-radius:8px;font:16px system-ui;max-width:440px">'
+      + '<b>Downloads paused</b><p>A "verify you are human" check appeared in a download tab. Complete it there, '
+      + 'then <b>close every tab except this one</b> and click Retry.</p>'
+      + '<button data-r="retry" style="font:inherit;padding:6px 16px">Retry</button> '
+      + '<button data-r="skip" style="font:inherit;padding:6px 16px">Skip this file</button></div>';
     const title = document.title;
     const flash = setInterval(() => { document.title = document.title === title ? '⚠ Verify you are human' : title; }, 1000);
-    box.querySelector('button').onclick = () => { clearInterval(flash); document.title = title; box.remove(); resolve(); };
+    for (const b of box.querySelectorAll('button')) {
+      b.onclick = () => { clearInterval(flash); document.title = title; box.remove(); resolve(b.dataset.r); };
+    }
     document.body.append(box);
     try {  // short beep; may be silent if the browser blocks audio
       const ac = new AudioContext(), o = ac.createOscillator();
@@ -138,16 +157,15 @@
     win = window.open(p.url, 'packt-download');
     await sleep(DELAY_MS);
 
-    let doc = null;
-    try { if (win.location.href !== 'about:blank') doc = win.document; } catch {}
-    if (doc && isChallenge(doc)) {
-      console.warn('  Human check appeared - paused. Complete it in the download tab, then click Continue here.');
-      await waitForHuman();
-      n--;  // retry this file
+    const state = tabState(win);
+    if (state === 'challenge' || state === 'lost') {
+      console.warn(`  Human check (${state === 'lost' ? 'download tab cut off' : 'check page'}) - paused.`);
+      if (await waitForHuman() === 'retry') n--;  // retry this file
+      else failed.push(p);
       continue;
     }
-    if (doc) {
-      console.warn(`  failed: the server showed a page instead of a file (${doc.title || 'untitled'})`);
+    if (state === 'page') {
+      console.warn(`  failed: the server showed a page instead of a file (${win.document.title || 'untitled'})`);
       failed.push(p);
       continue;
     }
