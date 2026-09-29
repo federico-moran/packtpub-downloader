@@ -4,7 +4,21 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 **Time needed:** about 10 minutes of setup, then about 90 minutes of mostly unattended running for a library of ~1,000 files. Stay within earshot for the occasional human check.
 
-> **Where I left off (2026-09-27, 07:32):** the first full run was stopped on purpose at **769 of 1,079** files in `Downloads\PacktPub`. Setup (steps 1–4) is done and Edge is still configured. **To continue, follow [Stopping and resuming → To resume](#stopping-and-resuming).** The script now has the Retry/Skip pause for human checks, but it hasn't been tested against a real check yet, so watch the first one.
+> **Where I left off (2026-09-29, about 07:10):** downloading is essentially finished: **1,091 files (20.4 GB), all valid**, in `Downloads\PacktPub`, plus a `manifest.csv` built by the new [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1). Edge is still configured (download folder, pop-ups, automatic downloads allowed).
+>
+> **Still missing** (the last pass on 2026-09-29 tried all four):
+>
+> - *The DevOps 2.2 Toolkit*, PDF and EPUB: the server returns an error page every time. Try its Download button by hand once; if that fails too, it's Packt's side.
+> - *Hands-On Penetration Testing on Windows* and *Python for Offensive PenTest*, EPUB: the script marked them started but no file arrived. Check **Ctrl+J** and click Retry. They're probably two of the three ISBNs with only a PDF on disk: 9781788295666, 9781788832823, 9781788838979.
+>
+> **Next steps:**
+>
+> 1. **Dry run** (the repo copy already has `DRY_RUN = true`): reload the library page, paste `browser/set-done.js` (1,091 files), then the script. Leave the saved `packt-library.json` in `Downloads\PacktPub`. The dry run now also saves each title's category, dates and other details.
+> 2. **Run `.\tools\Update-Manifest.ps1`.** With `packt-library.json` in the folder it fills in titles, publication dates and categories (check how they look in `manifest.csv`), and lists by title every file still not downloaded.
+> 3. For any retries, set `DRY_RUN = false` and **`DELAY_MS = 20000`**: at 5 s the server throttled and about 70 downloads stalled; at 20 s every file arrived.
+> 4. Then: put Edge's settings back (step 7), and load the books onto the Kindle with Calibre, reading each ISBN from the file name to fetch metadata (see [Alternative: Calibre](design-manifest-and-rename.md#alternative-calibre)). The PDFs have no title or author inside, so send the EPUBs where possible.
+>
+> **Learned on this run:** the Retry/Skip pause worked against a real human check. Edge asks once to allow "multiple automatic downloads" for the site: allow it. The browser record marks files when they *start*, so always rebuild it from disk (`Update-Manifest.ps1` or `New-SetDone.ps1`) before resuming.
 
 ## 1. Prepare a dedicated folder
 
@@ -35,7 +49,7 @@ Keeping the library in its own folder means:
 2. Press **F12** → **Console**. (The first time, type `allow pasting` when Edge asks.)
 3. Paste all of [`browser/packt-downloader.js`](../browser/packt-downloader.js) with `DRY_RUN = true` (the default) and press Enter.
 4. Note the line `Planned: N files in pdf, epub.` **N is your target count for step 6.**
-5. `packt-library.json` is saved to the PacktPub folder. It lists every title and its external code links; keep it or move it somewhere else.
+5. `packt-library.json` is saved to the PacktPub folder. It lists every title with its formats, details and external code links. **Leave it there:** `Update-Manifest.ps1` (step 6) takes titles from it and uses it to list anything not downloaded yet.
 
 ## 4. One-file test
 
@@ -70,7 +84,7 @@ Keeping the library in its own folder means:
 3. **Paste all of `browser/set-done.js`** (the file step 1 just created; copy it from VS Code) and press Enter. It prints `undefined`, which is normal. This replaces the browser's record with what's actually on disk.
 4. **Open `browser/packt-downloader.js`**, change `DRY_RUN = true` to `DRY_RUN = false` (the repo copy defaults to a dry run), check `MAX_DOWNLOADS = Infinity`, save, copy all of it, paste it into the Console and press Enter.
 5. **Check the numbers.** After the ~5-minute reading phase, the Console prints `Planned: 1079 files ... Already done: X. This run: Y.` **X should equal N** from step 1, and Y should be 1,079 − N. If X is 0 or far off, close the tab and repeat from step 2.
-6. **If a human check appears,** use the **Retry / Skip** screen: complete the check, close every tab except the library tab, then click **Retry**. If no pause screen appears and new check tabs keep opening, handle them by hand as before, then report it (the fix hasn't been tested yet).
+6. **If a human check appears,** use the **Retry / Skip** screen: complete the check, close every tab except the library tab, then click **Retry**. If no pause screen appears and new check tabs keep opening, handle them by hand as before, then report it (the pause worked against a real check on 2026-09-29).
 7. **When the Console prints `Finished`,** go to [step 6. Verify](#6-verify): `New-SetDone.ps1` should report **1,079** (or a few more if there are `(1)` duplicates).
 
 | Situation | What happens | What to do |
@@ -82,13 +96,15 @@ Keeping the library in its own folder means:
 
 ## 6. Verify
 
-1. Rebuild the "done" record from what's actually in the folder:
+1. Check every file and rebuild the "done" record from what's actually in the folder:
+
    ```powershell
-   .\tools\New-SetDone.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+   .\tools\Update-Manifest.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
    ```
-   It prints `N files recorded`. **Compare that with N from the dry run.**
-2. If it's lower, paste the generated `browser/set-done.js` into the Console, then run the downloader again. Only the missing files are downloaded. Repeat until the counts match.
-3. Duplicates such as `9781… (1).pdf` can appear after a human check. They're safe to delete.
+
+   It writes `manifest.csv` into the folder and prints how many files are valid, any that failed the check, and (with `packt-library.json` in the folder) **every file not downloaded yet, by title**. The first run hashes everything, about a minute for 20 GB.
+2. If anything is listed as not downloaded or failed, paste the generated `browser/set-done.js` into the Console, then run the downloader again. Only those files are downloaded. Repeat until nothing is listed.
+3. Duplicates such as `9781… (1).pdf` can appear after a human check. The manifest lists identical copies; the extras are safe to delete.
 4. A few titles have no downloadable files at all. The dry-run list shows them with empty `files`.
 
 ## 7. Afterwards

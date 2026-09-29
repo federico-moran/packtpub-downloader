@@ -1,6 +1,6 @@
 # Design: library manifest and human-readable file names
 
-**Status:** Proposed. Not started; to pick up after the first full download is complete.
+**Status:** Part 1 is built as [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1), with the ISBN check-digit test, and the dry run now saves each title's book-list details (`product`, `acquired`, `source`) in `packt-library.json`. The manifest also has `problem`, `status` (present or missing), `modified`, `published` and `category` columns. Parts 2 and 3 are proposed.
 
 ## Background
 
