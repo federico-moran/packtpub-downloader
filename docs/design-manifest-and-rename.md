@@ -144,6 +144,44 @@ Today the only way to stop is to close or reload the library tab, and every rest
 - **Reuse the library list:** cache the title list and file links (in `localStorage`, or the dry-run `packt-library.json` pasted back in, like `set-done.js`). A restart then skips straight to downloading. Add a `REFRESH_LIBRARY = true` setting, or refresh automatically when the cache is older than N days, so new purchases are still picked up.
 - **Record only confirmed files:** once the manifest exists (Part 1), generate the done list from it on every resume instead of relying on the browser's "started" record. This removes the Edge-closed-mid-download gap entirely.
 
+### Import into Calibre for the Kindle
+
+Goal: get the books onto a Kindle with the right title, author and cover. The Kindle shows the metadata *inside* each file and falls back to the file name when there is none.
+
+What the downloaded files carry (checked 2026-09-29):
+
+| | Title | Author | Cover | ISBN inside |
+| --- | --- | --- | --- | --- |
+| EPUB | Yes | Most; missing on many 2016–17 titles | Yes | Rarely |
+| PDF | No | No | n/a | No |
+
+So the ISBN in the file name is the only reliable key, and a PDF sent as it is shows up on the Kindle as `9781785888564`.
+
+**Tool:** `tools/Import-ToCalibre.ps1 -Folder <library> [-Library <calibre library>] [-Apply]`, driving Calibre's command-line tools (Calibre 9.15 is installed at `C:\Program Files\Calibre2`):
+
+| Tool | Use |
+| --- | --- |
+| `calibredb add` | Add each book to a Calibre library, passing Packt's title and the ISBN from `manifest.csv`. The PDF and EPUB of one ISBN become one book entry. |
+| `fetch-ebook-metadata --isbn` | Look up authors, cover, description and tags by ISBN (Google Books, Amazon). Read-only. |
+| `calibredb set_metadata` | Write the looked-up fields to the library entry. |
+| `ebook-meta` | Optionally, write title, author, ISBN and cover into standalone copies without a Calibre library. |
+
+Delivery then happens in Calibre itself: **Send to device** over USB (converts EPUB to AZW3 and fixes the Kindle's cover thumbnails) or **Email to Kindle** via Send to Kindle. Both write the metadata into the copy they send.
+
+Design points:
+
+- **Packt's data wins for the title;** the online lookup only fills gaps (authors, cover, description). Packt's category from `packt-library.json` can become a Calibre tag. Authors come back from Packt only as IDs (Part 3), so they come from the lookup.
+- **The ISBN-named originals are never modified.** Calibre keeps its own copies in its library folder.
+- **Idempotent:** skip ISBNs already in the Calibre library (`calibredb list --search isbn:…`), so it can be re-run after new purchases.
+- **Dry run by default:** without `-Apply`, print what would be added and what the lookup found.
+- `calibredb` must not write to a library that the Calibre window has open: close Calibre first, or go through `calibre-server` with `--with-library http://…`.
+- Pace the lookups, and cache the results next to the manifest, so a re-run doesn't query ~550 ISBNs again.
+- Prefer EPUB for the Kindle: PDFs keep their fixed page layout, which is hard to read on a 6–7" screen.
+
+Open questions: what share of Packt ISBNs the lookup gets right (spot-check covers and authors on ~20 titles first), and whether to keep the Calibre library next to the PacktPub folder or in Calibre's default location.
+
+Depends on Part 1 (built) and works best with `packt-library.json` in the folder, which supplies titles for the PDF-only books. If adopted, it largely replaces Part 2 (renaming).
+
 ## Alternative: Calibre
 
 [Calibre](https://calibre-ebook.com) already:
@@ -153,7 +191,7 @@ Today the only way to stop is to close or reload the library tab, and every rest
 - organises books as `Author/Title/`,
 - syncs to most e-readers.
 
-It can be scripted with `calibredb add` and `ebook-meta`.
+It can be scripted with `calibredb add` and `ebook-meta`; see the candidate feature [Import into Calibre for the Kindle](#import-into-calibre-for-the-kindle).
 
 Possible split: **these tools own the manifest** (what you have, and is it intact), and **Calibre owns presentation** (names, covers, device sync). If Calibre is adopted, Part 2 may be unnecessary.
 
@@ -167,6 +205,6 @@ Possible split: **these tools own the manifest** (what you have, and is it intac
 ## Suggested order
 
 1. Part 1: manifest and format check. `set-done.js` is generated from it.
-2. Decide on Calibre versus Part 2.
+2. Decide on Calibre versus Part 2. The Calibre import is the leading option for getting books onto the Kindle.
 3. Part 3 only if the metadata turns out to be useful.
 4. Candidate features: the ISBN check can go straight into Part 1. Acquisition and bundle grouping depend on Part 3's metadata. Adjustable pacing is independent and only touches the browser script.
