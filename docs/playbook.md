@@ -4,21 +4,19 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 **Time needed:** about 10 minutes of setup, then about 90 minutes of mostly unattended running for a library of ~1,000 files. Stay within earshot for the occasional human check.
 
-> **Where I left off (2026-09-29, about 07:10):** downloading is essentially finished: **1,091 files (20.4 GB), all valid**, in `Downloads\PacktPub`, plus a `manifest.csv` built by the new [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1). Edge is still configured (download folder, pop-ups, automatic downloads allowed).
+> **Where I left off (2026-09-30):** downloading is finished apart from one title: **1,091 files (20.4 GB), all valid**, in `Downloads\PacktPub`, with `manifest.csv` and the dry run's `packt-library.json` (907 titles). Every manifest row now has a title, publication date and category. Edge's settings are back to normal (step 7 done on 2026-09-30).
 >
-> **Still missing** (the last pass on 2026-09-29 tried all four):
+> **Not on disk:**
 >
-> - *The DevOps 2.2 Toolkit*, PDF and EPUB: the server returns an error page every time. Try its Download button by hand once; if that fails too, it's Packt's side.
-> - *Hands-On Penetration Testing on Windows* and *Python for Offensive PenTest*, EPUB: the script marked them started but no file arrived. Check **Ctrl+J** and click Retry. They're probably two of the three ISBNs with only a PDF on disk: 9781788295666, 9781788832823, 9781788838979.
+> - *The DevOps 2.2 Toolkit* (9781788991278), PDF and EPUB: the links are broken on Packt's side (an error page every time, by script and by hand); only the **MOBI** works. Both are in `skip.txt`. `Update-Manifest.ps1` checks and records `.mobi` files too.
+> - *Hands-On Penetration Testing on Windows* (9781788295666) and *Python for Offensive PenTest* (9781788838979), EPUB only: **Microsoft Defender blocks them** on every download (`Trojan:Win32/Bluteal!rfn` and `HackTool:Python/LaZagne.A!MTB`), matching attack code printed in one chapter of each. Almost certainly false positives, but allowing them would allow those detections machine-wide, so we **kept the PDFs instead**. Both are listed in `skip.txt` in the library folder, so `Update-Manifest.ps1` reports them as skipped and the downloader no longer retries them.
 >
 > **Next steps:**
 >
-> 1. **Dry run** (the repo copy already has `DRY_RUN = true`): reload the library page, paste `browser/set-done.js` (1,091 files), then the script. Leave the saved `packt-library.json` in `Downloads\PacktPub`. The dry run now also saves each title's category, dates and other details.
-> 2. **Run `.\tools\Update-Manifest.ps1`.** With `packt-library.json` in the folder it fills in titles, publication dates and categories (check how they look in `manifest.csv`), and lists by title every file still not downloaded.
-> 3. For any retries, set `DRY_RUN = false` and **`DELAY_MS = 20000`**: at 5 s the server throttled and about 70 downloads stalled; at 20 s every file arrived.
-> 4. Then: put Edge's settings back (step 7), and load the books onto the Kindle with Calibre, reading each ISBN from the file name to fetch metadata (see [Alternative: Calibre](design-manifest-and-rename.md#alternative-calibre)). The PDFs have no title or author inside, so send the EPUBs where possible.
+> 1. DevOps 2.2 Toolkit: on hold while you ask Packt (by email, 2026-09-30) to fix the PDF and EPUB links. If they fix them, remove both lines from `skip.txt` and run the script; if not, download the MOBI by hand. Either way, run `Update-Manifest.ps1` afterwards. For any future script retries, set `DRY_RUN = false` and **`DELAY_MS = 20000`** (at 5 s the server throttled and about 70 downloads stalled; at 20 s every file arrived), and paste `browser/set-done.js` first.
+> 2. Load the books onto the Kindle with Calibre (see [Import into Calibre for the Kindle](design-manifest-and-rename.md#import-into-calibre-for-the-kindle)). The PDFs have no title or author inside, so send the EPUBs where possible.
 >
-> **Learned on this run:** the Retry/Skip pause worked against a real human check. Edge asks once to allow "multiple automatic downloads" for the site: allow it. The browser record marks files when they *start*, so always rebuild it from disk (`Update-Manifest.ps1` or `New-SetDone.ps1`) before resuming.
+> **Learned on this run:** the Retry/Skip pause worked against a real human check. Edge asks once to allow "multiple automatic downloads" for the site: allow it. The browser record marks files when they *start*, so always rebuild it from disk (`Update-Manifest.ps1` or `New-SetDone.ps1`) before resuming. A download that "Couldn't download - Virus detected" in **Ctrl+J** is Defender, not the site: retrying won't help; check `Get-MpThreatDetection` for the detection name.
 
 ## 1. Prepare a dedicated folder
 
@@ -104,6 +102,7 @@ Keeping the library in its own folder means:
 
    It writes `manifest.csv` into the folder and prints how many files are valid, any that failed the check, and (with `packt-library.json` in the folder) **every file not downloaded yet, by title**. The first run hashes everything, about a minute for 20 GB.
 2. If anything is listed as not downloaded or failed, paste the generated `browser/set-done.js` into the Console, then run the downloader again. Only those files are downloaded. Repeat until nothing is listed.
+   If a file can never be downloaded (for example, the antivirus blocks it every time), add a line `<isbn>:<format>  reason` to `skip.txt` in the library folder. The manifest then lists it as skipped, and `set-done.js` includes it so the downloader stops retrying it.
 3. Duplicates such as `9781… (1).pdf` can appear after a human check. The manifest lists identical copies; the extras are safe to delete.
 4. A few titles have no downloadable files at all. The dry-run list shows them with empty `files`.
 

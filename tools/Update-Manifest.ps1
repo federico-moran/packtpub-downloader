@@ -10,12 +10,18 @@
     Every file is hashed (SHA-256) and checked:
       - PDF: starts with %PDF- and has an end marker (%%EOF) near the end, so truncated files are caught.
       - EPUB: a zip whose first entry is "mimetype" containing application/epub+zip, with a package (.opf) file.
+      - MOBI: has the BOOKMOBI marker in its header. Only kept for titles whose PDF and EPUB can't be downloaded.
       - The ISBN in the file name has a correct check digit.
     Files that fail are marked valid=false and left out of set-done.js, so the next run downloads them again.
 
     Titles, publication dates and categories come from packt-library.json (saved by the dry run) when it is
-    in the folder; otherwise the title is read from the EPUB. Only files named <ISBN>.pdf / <ISBN>.epub
+    in the folder; otherwise the title is read from the EPUB. Only files named <ISBN>.pdf / .epub / .mobi
     (optionally with " (1)" etc.) are counted.
+
+    skip.txt in the folder lists files you have decided not to download, one per line as
+    "<isbn>:<format>  reason" (lines starting with # are comments). For example, an EPUB that the
+    antivirus blocks every time because the book prints attack code. Skipped files go into set-done.js,
+    so the downloader stops retrying them, and are listed apart from the files not downloaded yet.
 
 .EXAMPLE
     .\tools\Update-Manifest.ps1
@@ -26,13 +32,14 @@
 param(
     [string]$Folder = (Join-Path $env:USERPROFILE 'Downloads\PacktPub'),
     [string]$Library,  # packt-library.json; default: the newest packt-library*.json in the folder
-    [string]$SetDoneFile = (Join-Path $PSScriptRoot '..\browser\set-done.js')
+    [string]$SetDoneFile = (Join-Path $PSScriptRoot '..\browser\set-done.js'),
+    [string]$SkipFile = (Join-Path $Folder 'skip.txt')
 )
 $ErrorActionPreference = 'Stop'
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 
 $manifestPath = Join-Path $Folder 'manifest.csv'
-$namePattern = '^(97[89]\d{10})(?: \(\d+\))?\.(pdf|epub)$'
+$namePattern = '^(97[89]\d{10})(?: \(\d+\))?\.(pdf|epub|mobi)$'
 $columns = 'isbn', 'format', 'title', 'file', 'bytes', 'sha256', 'valid', 'problem', 'status', 'added', 'modified', 'published', 'category'
 
 function Test-IsbnCheckDigit([string]$Isbn) {
@@ -59,6 +66,15 @@ function Test-BookFile([IO.FileInfo]$File, [string]$Format) {
             $tail = New-Object byte[] $n
             [void]$s.Read($tail, 0, $n)
             if ([Text.Encoding]::ASCII.GetString($tail) -notmatch '%%EOF') { return @{ problem = 'PDF has no end marker (truncated?)' } }
+        } finally { $s.Dispose() }
+        return @{ problem = '' }
+    }
+    if ($Format -eq 'mobi') {
+        $s = [IO.File]::OpenRead($File.FullName)
+        try {
+            $head = New-Object byte[] 68
+            $n = $s.Read($head, 0, 68)
+            if ($n -lt 68 -or [Text.Encoding]::ASCII.GetString($head, 60, 8) -ne 'BOOKMOBI') { return @{ problem = 'not a MOBI' } }
         } finally { $s.Dispose() }
         return @{ problem = '' }
     }
@@ -114,6 +130,13 @@ if ($Library) {
     Write-Host "Library list: $Library ($($lib.Count) titles)"
 } else {
     Write-Host 'No packt-library.json in the folder: titles come from the EPUBs, and missing downloads cannot be listed.'
+}
+
+$skip = @{}  # "isbn:format" -> reason
+if (Test-Path -LiteralPath $SkipFile) {
+    foreach ($l in Get-Content -LiteralPath $SkipFile -Encoding UTF8) {
+        if ($l -match '^\s*(97[89]\d{10}:(?:pdf|epub))\b\s*(.*)$') { $skip[$Matches[1]] = $Matches[2].Trim() }
+    }
 }
 
 # ---- Scan the folder -----------------------------------------------------------------------------
@@ -181,9 +204,11 @@ if (($existing -replace '\r\n', "`n").TrimEnd() -ne (($csv -join "`n") -replace 
     Write-Host "No changes: $manifestPath"
 }
 
-# ---- set-done.js: only files that are present and valid ------------------------------------------
+# ---- set-done.js: files that are present and valid, plus those in skip.txt ------------------------
 $good = @($rows | Where-Object { $_.status -eq 'present' -and $_.valid -eq 'true' })
-$doneKeys = @($good | ForEach-Object { "$($_.isbn):$($_.format)" } | Sort-Object -Unique)
+$haveKeys = @($good | ForEach-Object { "$($_.isbn):$($_.format)" } | Sort-Object -Unique)
+$skipped = @($skip.Keys | Where-Object { $haveKeys -notcontains $_ } | Sort-Object)
+$doneKeys = @($haveKeys + $skipped | Sort-Object -Unique)
 $line = "localStorage.setItem('packtDownloaderDone', JSON.stringify([$(($doneKeys | ForEach-Object { '"' + $_ + '"' }) -join ',')]));"
 Set-Content -LiteralPath $SetDoneFile -Value $line -Encoding utf8
 
@@ -212,7 +237,11 @@ if ($Library) {
         Write-Host "$($notDownloaded.Count) files the site offers are not downloaded yet:"
         $notDownloaded | ForEach-Object { '  {0}  {1}' -f $_, $expected[$_] } | Out-Host
     } else {
-        Write-Host 'Every PDF and EPUB the site offers is downloaded.'
+        Write-Host "Every PDF and EPUB the site offers is downloaded$(if ($skipped) { ', apart from those skipped' })."
     }
 }
-Write-Host "$($doneKeys.Count) files recorded in $SetDoneFile"
+if ($skipped) {
+    Write-Host "$($skipped.Count) files skipped on purpose (skip.txt):"
+    $skipped | ForEach-Object { '  {0}  {1}  {2}' -f $_, $expected[$_], $skip[$_] } | Out-Host
+}
+Write-Host "$($doneKeys.Count) files recorded in $SetDoneFile$(if ($skipped) { " (including $($skipped.Count) skipped)" })"

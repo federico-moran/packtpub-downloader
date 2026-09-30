@@ -62,7 +62,7 @@ To start over completely: `localStorage.removeItem('packtDownloaderDone')`.
 .\tools\Update-Manifest.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
 ```
 
-This keeps `manifest.csv` inside the download folder, with one row per file: ISBN, format, title, size, SHA-256 hash, and whether the file passed a check (a real PDF or EPUB, not cut off, and a valid ISBN). It also reports duplicates, files that have gone missing and, when the dry run's `packt-library.json` is in the folder, files the site offers that aren't downloaded yet. Like `New-SetDone.ps1` it writes `browser/set-done.js`, but only from files that passed the check. Re-runs only re-check files that changed. See [docs/design-manifest-and-rename.md](docs/design-manifest-and-rename.md).
+This keeps `manifest.csv` inside the download folder, with one row per file: ISBN, format, title, size, SHA-256 hash, and whether the file passed a check (a real PDF or EPUB, not cut off, and a valid ISBN). It also reports duplicates, files that have gone missing and, when the dry run's `packt-library.json` is in the folder, files the site offers that aren't downloaded yet. Like `New-SetDone.ps1` it writes `browser/set-done.js`, but only from files that passed the check. Re-runs only re-check files that changed. Files you've decided not to get (for example, an EPUB your antivirus always blocks because the book prints attack code) go in `skip.txt` in the folder, one `<isbn>:<format>  reason` per line; they're then reported as skipped and not retried. See [docs/design-manifest-and-rename.md](docs/design-manifest-and-rename.md).
 
 ## Limitations
 
