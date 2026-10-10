@@ -9,7 +9,7 @@
       - title (as on the site, e.g. "Mastering OpenStack - Second Edition")
       - authors (only when the site lists them)
       - ISBN, publication date and publisher
-      - the Packt category as a tag (existing tags are kept)
+      - the Packt category and "PacktPub" (-SourceTag) as tags (existing tags are kept)
 
     Each Calibre book is matched to the library folder by the SHA-256 hash of its EPUB, as recorded in
     manifest.csv (run Update-Manifest.ps1 first). A book whose file has changed is matched by the ISBN
@@ -28,10 +28,11 @@
 #>
 [CmdletBinding(SupportsShouldProcess)]
 param(
-    [string]$Folder = (Join-Path $env:USERPROFILE 'Downloads\PacktPub'),
+    [string]$Folder = (Join-Path $env:USERPROFILE 'OneDrive\Documents\PacktPub'),
     [string]$CalibreLibrary,  # default: the library Calibre last used
     [string]$Library,         # packt-library.json; default: the newest packt-library*.json in the folder
     [string]$Publisher = 'Packt Publishing',
+    [string]$SourceTag = 'PacktPub',  # where the books came from, as a tag ('' for none)
     [string]$CalibreDb = (Join-Path $env:ProgramFiles 'Calibre2\calibredb.exe')
 )
 $ErrorActionPreference = 'Stop'
@@ -73,11 +74,12 @@ function Get-BetterAuthors([string]$Packt, [string]$Current) {
 # ---- Packt's records: manifest.csv (hashes, titles, dates, categories) and authors from the dry run ----
 $manifestPath = Join-Path $Folder 'manifest.csv'
 if (-not (Test-Path -LiteralPath $manifestPath)) { throw "No manifest.csv in $Folder (run Update-Manifest.ps1 first)." }
-$byHash = @{}; $byIsbn = @{}
+$byHash = @{}; $byIsbn = @{}; $sizes = @{}
 foreach ($r in Import-Csv -LiteralPath $manifestPath) {
     if ($r.format -ne 'epub' -or $r.status -ne 'present') { continue }
     $byHash[$r.sha256] = $r
     $byIsbn[$r.isbn] = $r
+    $sizes[[long]$r.bytes] = $true
 }
 
 if (-not $Library) {
@@ -108,7 +110,10 @@ for ($i = 0; $i -lt $books.Count; $i++) {
     Write-Progress -Activity 'Matching Calibre books to the library folder' -Status $b.title -PercentComplete (100 * $i / $books.Count)
     $epub = @($b.formats) | Where-Object { $_ -like '*.epub' } | Select-Object -First 1
     $m = $null
-    if ($epub -and (Test-Path -LiteralPath $epub)) { $m = $byHash[(Get-FileHash -LiteralPath $epub -Algorithm SHA256).Hash.ToLower()] }
+    # Only files with the size of one of the library's EPUBs are hashed: the rest of Calibre (other stores' books) can't match.
+    if ($epub -and (Test-Path -LiteralPath $epub) -and $sizes[(Get-Item -LiteralPath $epub).Length]) {
+        $m = $byHash[(Get-FileHash -LiteralPath $epub -Algorithm SHA256).Hash.ToLower()]
+    }
     if (-not $m -and $b.identifiers.isbn) { $m = $byIsbn[[string]$b.identifiers.isbn] }
     if (-not $m) { $unmatched.Add($b); continue }
     $seen[$m.isbn] = @($seen[$m.isbn]) + $b.id | Where-Object { $_ }
@@ -131,7 +136,8 @@ for ($i = 0; $i -lt $books.Count; $i++) {
     }
     if ($Publisher -and $b.publisher -cne $Publisher) { $fields.publisher = $Publisher }
     $tags = @($b.tags)
-    if ($m.category -and $tags -notcontains $m.category) { $fields.tags = (@($tags) + $m.category | Where-Object { $_ }) -join ',' }
+    $newTags = @($SourceTag, $m.category | Where-Object { $_ -and $tags -notcontains $_ })
+    if ($newTags) { $fields.tags = (@($tags) + $newTags | Where-Object { $_ }) -join ',' }
 
     if ($fields.Count) {
         $changes.Add([pscustomobject]@{ id = $b.id; isbn = $m.isbn; was = $b.title; fields = $fields })
@@ -166,8 +172,10 @@ if ($WhatIfPreference) {
     Write-Host "$matched of $($books.Count) books matched; $done changed$(if ($failed) { ", $failed failed" }), the rest already correct."
 }
 if ($unmatched.Count) {
-    Write-Host "$($unmatched.Count) Calibre books are not in the library folder's manifest (left alone):"
-    $unmatched | ForEach-Object { '  #{0}  {1}' -f $_.id, $_.title } | Out-Host
+    # Calibre also holds other stores' books, so only those that look like Packt's are listed.
+    $packtLike = @($unmatched | Where-Object publisher -like '*Packt*')
+    Write-Host "$($unmatched.Count) Calibre books are not in the library folder's manifest (left alone)$(if ($packtLike) { "; $($packtLike.Count) of them published by Packt:" } else { '.' })"
+    $packtLike | ForEach-Object { '  #{0}  {1}' -f $_.id, $_.title } | Out-Host
 }
 $twice = @($seen.GetEnumerator() | Where-Object { @($_.Value).Count -gt 1 })
 if ($twice) {
