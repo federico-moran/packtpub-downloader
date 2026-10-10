@@ -9,7 +9,8 @@
 // How to use:
 //   1. Log in and open https://subscription.packtpub.com/owned in Edge.
 //   2. Press F12 > Console, paste this whole file, press Enter.
-//   3. It starts as a dry run (DRY_RUN = true): it lists what would be downloaded and saves packt-library.json.
+//   3. It starts as a dry run (DRY_RUN = true): it lists what would be downloaded and saves packt-library.json
+//      (every title with its formats and details; tools/Update-Manifest.ps1 reads it from the download folder).
 //   4. Set DRY_RUN = false (and MAX_DOWNLOADS = 1 for a first test) and run again.
 //   5. If Cloudflare's "verify you are human" check appears, the script pauses: complete the check
 //      in the download tab, close every other tab, then click Retry on the library page.
@@ -52,13 +53,11 @@
   };
 
   // 1. List every owned title
-  const titles = new Map();
+  const titles = new Map();  // isbn -> the book list's record for that title
   for (let offset = 0; ; offset += PAGE) {
     const { data = [] } = await getJson(`/api/entitlements/users/me/owned?limit=${PAGE}&offset=${offset}`);
     const before = titles.size;
-    for (const item of data) {
-      titles.set(String(item.productId), item.simplifiedProduct?.title || item.productName || String(item.productId));
-    }
+    for (const item of data) titles.set(String(item.productId), item);
     console.log(`Listed ${titles.size} titles...`);
     if (data.length === 0 || titles.size === before) break;  // end of list (or the API ignored offset)
     await sleep(500);
@@ -67,14 +66,19 @@
   // 2. Look up the available formats for each title
   const plan = [], external = [], manifest = [];
   let checked = 0;
-  for (const [isbn, title] of titles) {
-    let files = {};
+  for (const [isbn, item] of titles) {
+    const title = item.simplifiedProduct?.title || item.productName || isbn;
+    let files = {}, error;
     try {
       files = (await getJson(`/api/product/${isbn}/files`)).data || {};
     } catch (e) {
-      console.warn(`Could not get formats for "${title}": ${e.message}`);
+      error = e.message;
+      console.warn(`Could not get formats for "${title}": ${error}`);
     }
-    manifest.push({ isbn, title, files });
+    // Saved in the dry run's packt-library.json. `acquired`/`source` are when and how the title was
+    // added to the account; `product` is the book list's full description (category, dates, ...).
+    manifest.push({ isbn, title, files, ...(error && { error }),
+      acquired: item.createdAt, source: item.entitlementSource, product: item.simplifiedProduct });
     for (const [fmt, link] of Object.entries(files)) {
       if (typeof link !== 'string' || !link) continue;
       const url = new URL(link, location.origin);
@@ -96,8 +100,9 @@
   console.table(todo.map(({ title, fmt }) => ({ title, fmt })));
 
   if (DRY_RUN) {
-    saveTextFile('packt-library.json', JSON.stringify({ titles: manifest, externalLinks: external }, null, 2));
-    console.log('DRY RUN - nothing downloaded. Saved packt-library.json (full list + external code links).');
+    const saved = { generated: new Date().toISOString(), titles: manifest, externalLinks: external };
+    saveTextFile('packt-library.json', JSON.stringify(saved, null, 2));
+    console.log('DRY RUN - nothing downloaded. Saved packt-library.json (every title with its formats, details and external code links).');
     return 'Dry run finished';
   }
 

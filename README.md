@@ -31,7 +31,7 @@ Chrome works the same way (use `chrome://settings/...`).
 
 1. Log in and open `https://subscription.packtpub.com/owned`.
 2. Press **F12** → **Console**, paste all of [`browser/packt-downloader.js`](browser/packt-downloader.js), and press Enter.
-3. **Dry run** (the default): lists your titles, the formats available, and what would be downloaded, and saves `packt-library.json` (every title plus its external code-repository links).
+3. **Dry run** (the default): lists your titles, the formats available, and what would be downloaded, and saves `packt-library.json` (every title with its formats, details such as category and publication date, and its external code-repository links).
 4. Edit the settings at the top of the script and run again:
    - `DRY_RUN = false` to download
    - `MAX_DOWNLOADS = 1` for a first test, then `Infinity`
@@ -55,6 +55,14 @@ The script records each file it starts in the site's `localStorage`, so running 
 Then paste the generated `browser/set-done.js` into the Console before running the downloader again. That file lists your library, so it is git-ignored.
 
 To start over completely: `localStorage.removeItem('packtDownloaderDone')`.
+
+### Checking the library: the manifest
+
+```powershell
+.\tools\Update-Manifest.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+```
+
+This keeps `manifest.csv` inside the download folder, with one row per file: ISBN, format, title, size, SHA-256 hash, and whether the file passed a check (a real PDF or EPUB, not cut off, and a valid ISBN). It also reports duplicates, files that have gone missing and, when the dry run's `packt-library.json` is in the folder, files the site offers that aren't downloaded yet. Like `New-SetDone.ps1` it writes `browser/set-done.js`, but only from files that passed the check. Re-runs only re-check files that changed. Files you've decided not to get (for example, an EPUB your antivirus always blocks because the book prints attack code) go in `skip.txt` in the folder, one `<isbn>:<format>  reason` per line; they're then reported as skipped and not retried. See [docs/design-manifest-and-rename.md](docs/design-manifest-and-rename.md).
 
 ## Limitations
 

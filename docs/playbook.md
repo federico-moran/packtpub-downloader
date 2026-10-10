@@ -4,7 +4,21 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 **Time needed:** about 10 minutes of setup, then about 90 minutes of mostly unattended running for a library of ~1,000 files. Stay within earshot for the occasional human check.
 
-> **Where I left off (2026-09-27, 07:32):** the first full run was stopped on purpose at **769 of 1,079** files in `Downloads\PacktPub`. Setup (steps 1–4) is done and Edge is still configured. **To continue, follow [Stopping and resuming → To resume](#stopping-and-resuming).** The script now has the Retry/Skip pause for human checks, but it hasn't been tested against a real check yet, so watch the first one.
+> **Update (2026-10-09):** the library folder has moved to `OneDrive\Documents\PacktPub` (pass `-Folder "$env:USERPROFILE\OneDrive\Documents\PacktPub"` to the tools). The 546 EPUBs are in Calibre (`D:\Calibre`), and `Update-CalibreMetadata.ps1` has corrected their details: ISBN, date, publisher, category tag, and titles and authors where Packt's records are better. Not in Calibre: the three PDF-only titles (the two below, and *Java 9: Building Robust Modular Applications*). Still open: sending books to the Kindle. The DevOps 2.2 Toolkit is dropped (2026-10-10): you chose not to pursue it; *The DevOps 2.3 Toolkit*, a different book in the same series, is downloaded.
+>
+> **Where I left off (2026-09-30):** downloading is finished apart from one title: **1,091 files (20.4 GB), all valid**, in `Downloads\PacktPub`, with `manifest.csv` and the dry run's `packt-library.json` (907 titles). Every manifest row now has a title, publication date and category. Edge's settings are back to normal (step 7 done on 2026-09-30).
+>
+> **Not on disk:**
+>
+> - *The DevOps 2.2 Toolkit* (9781788991278), PDF and EPUB: the links are broken on Packt's side (an error page every time, by script and by hand); only the **MOBI** works. Both are in `skip.txt`. `Update-Manifest.ps1` checks and records `.mobi` files too.
+> - *Hands-On Penetration Testing on Windows* (9781788295666) and *Python for Offensive PenTest* (9781788838979), EPUB only: **Microsoft Defender blocks them** on every download (`Trojan:Win32/Bluteal!rfn` and `HackTool:Python/LaZagne.A!MTB`), matching attack code printed in one chapter of each. Almost certainly false positives, but allowing them would allow those detections machine-wide, so we **kept the PDFs instead**. Both are listed in `skip.txt` in the library folder, so `Update-Manifest.ps1` reports them as skipped and the downloader no longer retries them.
+>
+> **Next steps:**
+>
+> 1. ~~DevOps 2.2 Toolkit~~: dropped on 2026-10-10. Its PDF and EPUB links are broken on Packt's side and it stays in `skip.txt`. (*The DevOps 2.3 Toolkit* is a different book in the series, and is downloaded.) For any future script retries, set `DRY_RUN = false` and **`DELAY_MS = 20000`** (at 5 s the server throttled and about 70 downloads stalled; at 20 s every file arrived), and paste `browser/set-done.js` first.
+> 2. ~~Load the books into Calibre~~ (done 2026-10-09, see the update above). Send them to the Kindle from Calibre ([step 7](#7-afterwards)).
+>
+> **Learned on this run:** the Retry/Skip pause worked against a real human check. Edge asks once to allow "multiple automatic downloads" for the site: allow it. The browser record marks files when they *start*, so always rebuild it from disk (`Update-Manifest.ps1` or `New-SetDone.ps1`) before resuming. A download that "Couldn't download - Virus detected" in **Ctrl+J** is Defender, not the site: retrying won't help; check `Get-MpThreatDetection` for the detection name.
 
 ## 1. Prepare a dedicated folder
 
@@ -35,7 +49,7 @@ Keeping the library in its own folder means:
 2. Press **F12** → **Console**. (The first time, type `allow pasting` when Edge asks.)
 3. Paste all of [`browser/packt-downloader.js`](../browser/packt-downloader.js) with `DRY_RUN = true` (the default) and press Enter.
 4. Note the line `Planned: N files in pdf, epub.` **N is your target count for step 6.**
-5. `packt-library.json` is saved to the PacktPub folder. It lists every title and its external code links; keep it or move it somewhere else.
+5. `packt-library.json` is saved to the PacktPub folder. It lists every title with its formats, details and external code links. **Leave it there:** `Update-Manifest.ps1` (step 6) takes titles from it and uses it to list anything not downloaded yet.
 
 ## 4. One-file test
 
@@ -70,7 +84,7 @@ Keeping the library in its own folder means:
 3. **Paste all of `browser/set-done.js`** (the file step 1 just created; copy it from VS Code) and press Enter. It prints `undefined`, which is normal. This replaces the browser's record with what's actually on disk.
 4. **Open `browser/packt-downloader.js`**, change `DRY_RUN = true` to `DRY_RUN = false` (the repo copy defaults to a dry run), check `MAX_DOWNLOADS = Infinity`, save, copy all of it, paste it into the Console and press Enter.
 5. **Check the numbers.** After the ~5-minute reading phase, the Console prints `Planned: 1079 files ... Already done: X. This run: Y.` **X should equal N** from step 1, and Y should be 1,079 − N. If X is 0 or far off, close the tab and repeat from step 2.
-6. **If a human check appears,** use the **Retry / Skip** screen: complete the check, close every tab except the library tab, then click **Retry**. If no pause screen appears and new check tabs keep opening, handle them by hand as before, then report it (the fix hasn't been tested yet).
+6. **If a human check appears,** use the **Retry / Skip** screen: complete the check, close every tab except the library tab, then click **Retry**. If no pause screen appears and new check tabs keep opening, handle them by hand as before, then report it (the pause worked against a real check on 2026-09-29).
 7. **When the Console prints `Finished`,** go to [step 6. Verify](#6-verify): `New-SetDone.ps1` should report **1,079** (or a few more if there are `(1)` duplicates).
 
 | Situation | What happens | What to do |
@@ -82,19 +96,30 @@ Keeping the library in its own folder means:
 
 ## 6. Verify
 
-1. Rebuild the "done" record from what's actually in the folder:
+1. Check every file and rebuild the "done" record from what's actually in the folder:
+
    ```powershell
-   .\tools\New-SetDone.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+   .\tools\Update-Manifest.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
    ```
-   It prints `N files recorded`. **Compare that with N from the dry run.**
-2. If it's lower, paste the generated `browser/set-done.js` into the Console, then run the downloader again. Only the missing files are downloaded. Repeat until the counts match.
-3. Duplicates such as `9781… (1).pdf` can appear after a human check. They're safe to delete.
+
+   It writes `manifest.csv` into the folder and prints how many files are valid, any that failed the check, and (with `packt-library.json` in the folder) **every file not downloaded yet, by title**. The first run hashes everything, about a minute for 20 GB.
+2. If anything is listed as not downloaded or failed, paste the generated `browser/set-done.js` into the Console, then run the downloader again. Only those files are downloaded. Repeat until nothing is listed.
+   If a file can never be downloaded (for example, the antivirus blocks it every time), add a line `<isbn>:<format>  reason` to `skip.txt` in the library folder. The manifest then lists it as skipped, and `set-done.js` includes it so the downloader stops retrying it.
+3. Duplicates such as `9781… (1).pdf` can appear after a human check. The manifest lists identical copies; the extras are safe to delete.
 4. A few titles have no downloadable files at all. The dry-run list shows them with empty `files`.
 
 ## 7. Afterwards
 
 1. **Put Edge back:** `edge://settings/downloads` → set *Location* back to your usual Downloads folder, and turn *Ask me what to do with each download* back on if you like.
 2. **Copy to your reading device:** EPUBs suit most e-readers and phones; PDFs are better on tablets or for diagrams-heavy books.
+   For a Kindle, add the EPUBs to Calibre (*Add books*; the originals are copied, not changed), close Calibre, then fix their details from Packt's records:
+
+   ```powershell
+   .\tools\Update-CalibreMetadata.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub" -WhatIf   # preview
+   .\tools\Update-CalibreMetadata.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+   ```
+
+   It sets each book's ISBN, publication date, publisher and category tag, and corrects titles (adding the edition) and missing authors. It backs up Calibre's database first, and a second run changes nothing. Then send the books from Calibre (*Send to device* or *Email to Kindle*).
 3. **Back up:** archive the whole PacktPub folder (zip it, or copy it to your backup drive or cloud storage).
 4. Optional: leave the pop-up permission for PacktPub in place for next time.
 
