@@ -1,6 +1,6 @@
 # Design: library manifest and human-readable file names
 
-**Status:** Part 1 is built as [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1), with the ISBN check-digit test, and the dry run now saves each title's book-list details (`product`, `acquired`, `source`) in `packt-library.json`. The manifest also has `problem`, `status` (present or missing), `modified`, `published` and `category` columns. Parts 2 and 3 are proposed.
+**Status:** the books are in Calibre with corrected details (see [Import into Calibre for the Kindle](#import-into-calibre-for-the-kindle)), which makes Part 2 unnecessary. Part 1 is built as [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1), with the ISBN check-digit test, and the dry run now saves each title's book-list details (`product`, `acquired`, `source`) in `packt-library.json`. The manifest also has `problem`, `status` (present or missing), `modified`, `published` and `category` columns. Part 3 is still only proposed.
 
 ## Background
 
@@ -145,6 +145,8 @@ Today the only way to stop is to close or reload the library tab, and every rest
 - **Record only confirmed files:** once the manifest exists (Part 1), generate the done list from it on every resume instead of relying on the browser's "started" record. This removes the Edge-closed-mid-download gap entirely.
 
 ### Import into Calibre for the Kindle
+
+**Status (2026-10-09):** done a simpler way than planned below. The EPUBs were added by hand in the Calibre window (546 books, library at `D:\Calibre`), and [`tools/Update-CalibreMetadata.ps1`](../tools/Update-CalibreMetadata.ps1) then corrects their details from Packt's records, with no online lookup. It matches each Calibre book to `manifest.csv` by the EPUB's SHA-256 hash, and sets the ISBN, publication date, publisher and category tag. It also sets the title and authors, but only where Packt's are better: Packt's titles include the edition, which the EPUBs often leave out, but 14 have `?` where a character was lost. The dry run's `linkAuthors` field does give author names, contrary to the note below, but some are surname-only, so they only replace a placeholder (`Unknown`), a comma-joined list, or a shorter list. The plan below is kept for reference.
 
 Goal: get the books onto a Kindle with the right title, author and cover. The Kindle shows the metadata *inside* each file and falls back to the file name when there is none.
 
