@@ -115,11 +115,11 @@ Keeping the library in its own folder means:
    For a Kindle, add the EPUBs to Calibre (*Add books*; the originals are copied, not changed), close Calibre, then fix their details from Packt's records:
 
    ```powershell
-   .\tools\Update-CalibreMetadata.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub" -WhatIf   # preview
-   .\tools\Update-CalibreMetadata.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+   .\tools\Update-CalibreMetadata.ps1 -WhatIf   # preview
+   .\tools\Update-CalibreMetadata.ps1
    ```
 
-   It sets each book's ISBN, publication date, publisher and category tag, and corrects titles (adding the edition) and missing authors. It backs up Calibre's database first, and a second run changes nothing. Then send the books from Calibre (*Send to device* or *Email to Kindle*).
+   (It now defaults to `OneDrive\Documents\PacktPub`; use `-Folder` for another copy.) It sets each book's ISBN, publication date, publisher, category tag and a `PacktPub` tag (so they can be told apart from the Humble Bundle books in the same library), and corrects titles (adding the edition) and missing authors. It backs up Calibre's database first, and a second run changes nothing. Then send the books from Calibre (*Send to device* or *Email to Kindle*).
 3. **Back up:** archive the whole PacktPub folder (zip it, or copy it to your backup drive or cloud storage).
 4. Optional: leave the pop-up permission for PacktPub in place for next time.
 
