@@ -4,6 +4,8 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 **Time needed:** about 10 minutes of setup, then about 90 minutes of mostly unattended running for a library of ~1,000 files. Stay within earshot for the occasional human check.
 
+> **Update (2026-10-09):** the library folder has moved to `OneDrive\Documents\PacktPub` (pass `-Folder "$env:USERPROFILE\OneDrive\Documents\PacktPub"` to the tools). The 546 EPUBs are in Calibre (`D:\Calibre`), and `Update-CalibreMetadata.ps1` has corrected their details: ISBN, date, publisher, category tag, and titles and authors where Packt's records are better. Not in Calibre: the three PDF-only titles (the two below, and *Java 9: Building Robust Modular Applications*). Still open: sending books to the Kindle. The DevOps 2.2 Toolkit is dropped (2026-10-10): you chose not to pursue it; *The DevOps 2.3 Toolkit*, a different book in the same series, is downloaded.
+>
 > **Where I left off (2026-09-30):** downloading is finished apart from one title: **1,091 files (20.4 GB), all valid**, in `Downloads\PacktPub`, with `manifest.csv` and the dry run's `packt-library.json` (907 titles). Every manifest row now has a title, publication date and category. Edge's settings are back to normal (step 7 done on 2026-09-30).
 >
 > **Not on disk:**
@@ -13,8 +15,8 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 >
 > **Next steps:**
 >
-> 1. DevOps 2.2 Toolkit: on hold while you ask Packt (by email, 2026-09-30) to fix the PDF and EPUB links. If they fix them, remove both lines from `skip.txt` and run the script; if not, download the MOBI by hand. Either way, run `Update-Manifest.ps1` afterwards. For any future script retries, set `DRY_RUN = false` and **`DELAY_MS = 20000`** (at 5 s the server throttled and about 70 downloads stalled; at 20 s every file arrived), and paste `browser/set-done.js` first.
-> 2. Load the books onto the Kindle with Calibre (see [Import into Calibre for the Kindle](design-manifest-and-rename.md#import-into-calibre-for-the-kindle)). The PDFs have no title or author inside, so send the EPUBs where possible.
+> 1. ~~DevOps 2.2 Toolkit~~: dropped on 2026-10-10. Its PDF and EPUB links are broken on Packt's side and it stays in `skip.txt`. (*The DevOps 2.3 Toolkit* is a different book in the series, and is downloaded.) For any future script retries, set `DRY_RUN = false` and **`DELAY_MS = 20000`** (at 5 s the server throttled and about 70 downloads stalled; at 20 s every file arrived), and paste `browser/set-done.js` first.
+> 2. ~~Load the books into Calibre~~ (done 2026-10-09, see the update above). Send them to the Kindle from Calibre ([step 7](#7-afterwards)).
 >
 > **Learned on this run:** the Retry/Skip pause worked against a real human check. Edge asks once to allow "multiple automatic downloads" for the site: allow it. The browser record marks files when they *start*, so always rebuild it from disk (`Update-Manifest.ps1` or `New-SetDone.ps1`) before resuming. A download that "Couldn't download - Virus detected" in **Ctrl+J** is Defender, not the site: retrying won't help; check `Get-MpThreatDetection` for the detection name.
 
@@ -110,6 +112,14 @@ Keeping the library in its own folder means:
 
 1. **Put Edge back:** `edge://settings/downloads` → set *Location* back to your usual Downloads folder, and turn *Ask me what to do with each download* back on if you like.
 2. **Copy to your reading device:** EPUBs suit most e-readers and phones; PDFs are better on tablets or for diagrams-heavy books.
+   For a Kindle, add the EPUBs to Calibre (*Add books*; the originals are copied, not changed), close Calibre, then fix their details from Packt's records:
+
+   ```powershell
+   .\tools\Update-CalibreMetadata.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub" -WhatIf   # preview
+   .\tools\Update-CalibreMetadata.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+   ```
+
+   It sets each book's ISBN, publication date, publisher and category tag, and corrects titles (adding the edition) and missing authors. It backs up Calibre's database first, and a second run changes nothing. Then send the books from Calibre (*Send to device* or *Email to Kindle*).
 3. **Back up:** archive the whole PacktPub folder (zip it, or copy it to your backup drive or cloud storage).
 4. Optional: leave the pop-up permission for PacktPub in place for next time.
 
