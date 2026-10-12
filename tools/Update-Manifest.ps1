@@ -30,7 +30,7 @@
     .\tools\Update-Manifest.ps1 -Folder "E:\Backup\PacktPub" -SetDoneFile "$env:TEMP\set-done.js"
 #>
 param(
-    [string]$Folder = (Join-Path $env:USERPROFILE 'Downloads\PacktPub'),
+    [string]$Folder = (Join-Path $env:USERPROFILE 'OneDrive\Documents\PacktPub'),
     [string]$Library,  # packt-library.json; default: the newest packt-library*.json in the folder
     [string]$SetDoneFile = (Join-Path $PSScriptRoot '..\browser\set-done.js'),
     [string]$SkipFile = (Join-Path $Folder 'skip.txt')
@@ -135,7 +135,7 @@ if ($Library) {
 $skip = @{}  # "isbn:format" -> reason
 if (Test-Path -LiteralPath $SkipFile) {
     foreach ($l in Get-Content -LiteralPath $SkipFile -Encoding UTF8) {
-        if ($l -match '^\s*(97[89]\d{10}:(?:pdf|epub))\b\s*(.*)$') { $skip[$Matches[1]] = $Matches[2].Trim() }
+        if ($l -match '^\s*(97[89]\d{10}:(?:pdf|epub|mobi))\b\s*(.*)$') { $skip[$Matches[1]] = $Matches[2].Trim() }
     }
 }
 
