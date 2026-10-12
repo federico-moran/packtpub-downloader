@@ -4,6 +4,8 @@ A step-by-step checklist for each run. For what the tool is and how it works, se
 
 **Time needed:** about 10 minutes of setup, then about 90 minutes of mostly unattended running for a library of ~1,000 files. Stay within earshot for the occasional human check.
 
+> **Update (2026-10-11):** all three tools now default to `OneDrive\Documents\PacktPub`, so `-Folder` is only needed for another copy (a backup, say). `skip.txt` also accepts `<isbn>:mobi` lines, and `New-SetDone.ps1` counts `.mobi` files, as `Update-Manifest.ps1` already did.
+>
 > **Update (2026-10-10):** Calibre now also holds the 585 Humble Bundle EPUBs (1,132 books; see the humblebundle-downloader repo). Every Packt book has a `PacktPub` tag, and `Update-CalibreMetadata.ps1` now defaults to `OneDrive\Documents\PacktPub` (`Update-Manifest.ps1` and `New-SetDone.ps1` still need `-Folder`). No book is in both libraries. Kindle: the plan is to send books in subject batches, as copies made from Calibre (its details written into the file, a subject at the start of the title) and imported on the Scribe from OneDrive, after resetting both Kindles and deleting the old documents from the Amazon account. Calibre itself is never changed for the Kindle. The subject list is still to be designed.
 >
 > **Update (2026-10-09):** the library folder has moved to `OneDrive\Documents\PacktPub` (pass `-Folder "$env:USERPROFILE\OneDrive\Documents\PacktPub"` to the tools). The 546 EPUBs are in Calibre (`D:\Calibre`), and `Update-CalibreMetadata.ps1` has corrected their details: ISBN, date, publisher, category tag, and titles and authors where Packt's records are better. Not in Calibre: the three PDF-only titles (the two below, and *Java 9: Building Robust Modular Applications*). Still open: sending books to the Kindle. The DevOps 2.2 Toolkit is dropped (2026-10-10): you chose not to pursue it; *The DevOps 2.3 Toolkit*, a different book in the same series, is downloaded.
@@ -101,7 +103,7 @@ Keeping the library in its own folder means:
 1. Check every file and rebuild the "done" record from what's actually in the folder:
 
    ```powershell
-   .\tools\Update-Manifest.ps1 -Folder "$env:USERPROFILE\Downloads\PacktPub"
+   .\tools\Update-Manifest.ps1  # the library in OneDrive\Documents\PacktPub; -Folder for another
    ```
 
    It writes `manifest.csv` into the folder and prints how many files are valid, any that failed the check, and (with `packt-library.json` in the folder) **every file not downloaded yet, by title**. The first run hashes everything, about a minute for 20 GB.
