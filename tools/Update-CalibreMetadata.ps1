@@ -9,7 +9,9 @@
       - title (as on the site, e.g. "Mastering OpenStack - Second Edition")
       - authors (only when the site lists them)
       - ISBN, publication date and publisher
-      - the Packt category and "PacktPub" (-SourceTag) as tags (existing tags are kept)
+      - the Packt category and "PacktPub" (-SourceTag) as tags
+    Existing tags are kept, apart from bookstore subject codes (BISAC, e.g. "COM053000 - COMPUTERS / Security /
+    General") that Calibre read from the EPUB: they are removed.
 
     Each Calibre book is matched to the library folder by the SHA-256 hash of its EPUB, as recorded in
     manifest.csv (run Update-Manifest.ps1 first). A book whose file has changed is matched by the ISBN
@@ -102,6 +104,11 @@ if ($LASTEXITCODE) { throw "calibredb list failed (exit code $LASTEXITCODE)." }
 $books = @(($json -join "`n") | ConvertFrom-Json)
 Write-Host "Calibre library: $CalibreLibrary ($($books.Count) books)"
 
+# Bookstore subject codes (BISAC) that Calibre read from the EPUBs as tags, e.g. "COM053000 - COMPUTERS /
+# Security / General", also bare ("COM051260") or misspelt. Fewer than half the books have them, and 125 of
+# them swamped the tag browser, so they are dropped; the codes stay inside the EPUB files.
+$bisac = '^\s*[A-Z]{3}\d{6}\b|^\s*COMPUTERS\s*/'
+$removedTags = 0
 $changes = New-Object Collections.Generic.List[object]
 $unmatched = New-Object Collections.Generic.List[object]
 $seen = @{}  # isbn -> Calibre ids, to report the same book added twice
@@ -135,9 +142,11 @@ for ($i = 0; $i -lt $books.Count; $i++) {
         if (-not $shifted -or $stored -ne $shifted.ToString('yyyy-MM-dd')) { $fields.pubdate = $m.published }
     }
     if ($Publisher -and $b.publisher -cne $Publisher) { $fields.publisher = $Publisher }
-    $tags = @($b.tags)
-    $newTags = @($SourceTag, $m.category | Where-Object { $_ -and $tags -notcontains $_ })
-    if ($newTags) { $fields.tags = (@($tags) + $newTags | Where-Object { $_ }) -join ',' }
+    $tags = @($b.tags | Where-Object { $_ })
+    $keep = @($tags | Where-Object { $_ -notmatch $bisac })
+    $removedTags += $tags.Count - $keep.Count
+    $want = @($keep) + @($SourceTag, $m.category | Where-Object { $_ -and $keep -notcontains $_ })
+    if (($want -join ',') -cne ($tags -join ',')) { $fields.tags = $want -join ',' }
 
     if ($fields.Count) {
         $changes.Add([pscustomobject]@{ id = $b.id; isbn = $m.isbn; was = $b.title; fields = $fields })
@@ -171,6 +180,7 @@ if ($WhatIfPreference) {
 } else {
     Write-Host "$matched of $($books.Count) books matched; $done changed$(if ($failed) { ", $failed failed" }), the rest already correct."
 }
+if ($removedTags) { Write-Host "$removedTags subject-code tags $(if ($WhatIfPreference) { 'would be removed' } else { 'removed' })." }
 if ($unmatched.Count) {
     # Calibre also holds other stores' books, so only those that look like Packt's are listed.
     $packtLike = @($unmatched | Where-Object publisher -like '*Packt*')
