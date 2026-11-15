@@ -1,6 +1,18 @@
 # Design: library manifest and human-readable file names
 
-**Status:** the books are in Calibre with corrected details (see [Import into Calibre for the Kindle](#import-into-calibre-for-the-kindle)), which makes Part 2 unnecessary. Part 1 is built as [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1), with the ISBN check-digit test, and the dry run now saves each title's book-list details (`product`, `acquired`, `source`) in `packt-library.json`. The manifest also has `problem`, `status` (present or missing), `modified`, `published` and `category` columns. Part 3 is still only proposed.
+**Status:** this is the original plan, kept as a record of how the thinking went. Some of it was built, some was replaced by a simpler route, and some is still only an idea.
+
+Built:
+
+- **Part 1, the manifest:** [`tools/Update-Manifest.ps1`](../tools/Update-Manifest.ps1), with the ISBN check-digit test, a skip list (`skip.txt`) and more columns than planned (`problem`, `status`, `modified`, `published`, `category`).
+- **Part 3, in part:** the dry run saves each title's book-list details (`product`, `acquired`, `source`) in `packt-library.json`.
+- **Calibre, a simpler way than planned:** the EPUBs were added by hand, and [`tools/Update-CalibreMetadata.ps1`](../tools/Update-CalibreMetadata.ps1) corrects their details. See [Import into Calibre for the Kindle](#import-into-calibre-for-the-kindle).
+
+Not built:
+
+- **Part 2, renaming files to titles** (`Rename-Library.ps1`): having the books in Calibre made it unnecessary.
+- **`Import-ToCalibre.ps1`** and its online metadata lookup.
+- **Grouping by bundle, adjustable pacing, and the clean stop and faster restarts.**
 
 ## Background
 
@@ -29,7 +41,7 @@ Separately, ISBN file names are hard to browse on an e-reader or in a backup.
 
 ## Part 1: the manifest
 
-A file kept **inside the library folder** (e.g. `Downloads\PacktPub\manifest.csv`), so it travels with every copy and backup.
+A file kept **inside the library folder** (e.g. `OneDrive\Documents\PacktPub\manifest.csv`), so it travels with every copy and backup.
 
 | Column | Meaning |
 | --- | --- |
@@ -60,9 +72,9 @@ A file kept **inside the library folder** (e.g. `Downloads\PacktPub\manifest.csv
 - Verifying backups and e-reader copies against the manifest.
 - Noticing when PacktPub updates a book (a new hash on re-download).
 
-## Part 2: rename to titles
+## Part 2: rename to titles (proposed, not built)
 
-**Tool:** `tools/Rename-Library.ps1 -Folder <library> -Library packt-library.json [-Apply]`
+**Tool (proposed, not built):** `tools/Rename-Library.ps1 -Folder <library> -Library packt-library.json [-Apply]`
 
 - **Input:** `packt-library.json` from the dry run (ISBN → title). No network access, so the result is deterministic.
 - **Name format:** `<Title> [<isbn>].<ext>`, e.g. `Learn Wireshark - Second Edition [9781803231679].pdf`.
@@ -159,7 +171,7 @@ What the downloaded files carry (checked 2026-09-29):
 
 So the ISBN in the file name is the only reliable key, and a PDF sent as it is shows up on the Kindle as `9781785888564`.
 
-**Tool:** `tools/Import-ToCalibre.ps1 -Folder <library> [-Library <calibre library>] [-Apply]`, driving Calibre's command-line tools (Calibre 9.15 is installed at `C:\Program Files\Calibre2`):
+**Tool (proposed, not built):** `tools/Import-ToCalibre.ps1 -Folder <library> [-Library <calibre library>] [-Apply]`, driving Calibre's command-line tools:
 
 | Tool | Use |
 | --- | --- |

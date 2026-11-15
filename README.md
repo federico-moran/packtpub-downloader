@@ -22,7 +22,7 @@ Instead of fighting the bot check, this version runs **in the page itself**, via
 
 For the full run checklist (folder setup, verification, moving to your reader, backup), see the **[playbook](docs/playbook.md)**.
 
-1. **Create a dedicated folder** for the library, e.g. `Downloads\PacktPub`, so the files are easy to move to a reading device, back up, and verify.
+1. **Create a dedicated folder** for the library, so the files are easy to move to a reading device, back up, and verify. The tools look in `OneDrive\Documents\PacktPub` (under your user folder) unless told otherwise; if you use another folder, pass it to each tool with `-Folder`.
 2. **Allow pop-ups** for the site: `edge://settings/content/popups` → Allow → Add → `https://subscription.packtpub.com`
 3. **Downloads**: `edge://settings/downloads` → turn off *Ask me what to do with each download*, and set *Location* to that folder. This applies to all Edge downloads, so switch it back after the run.
 4. The first time you paste into the Console, Edge asks you to type `allow pasting`. That warning exists because of the attack described in [docs/self-xss.md](docs/self-xss.md), so read what you paste.
@@ -48,7 +48,7 @@ The check page also cuts the library tab's link to the download tab, so if the s
 
 ### Resuming and fixing the record
 
-The script records each file it starts in the site's `localStorage`, so running it again skips those files. If that record drifts from reality (for example, downloads were blocked while you were away), rebuild it from the files actually on disk:
+The script records each file it starts in the site's `localStorage`, so running it again skips those files. If that record drifts from reality (for example, downloads were blocked while you were away), rebuild it from the files actually on disk. The tools in `tools/` are PowerShell scripts for Windows:
 
 ```powershell
 .\tools\New-SetDone.ps1  # the library in OneDrive\Documents\PacktPub; -Folder for another
@@ -71,15 +71,26 @@ This keeps `manifest.csv` inside the download folder, with one row per file: ISB
 - The download request can't be inspected from the page, so a failed download only shows in the browser's downloads list (**Ctrl+J**).
 - Some titles have no downloadable files; they are skipped.
 - Code bundles hosted on GitHub are listed in `packt-library.json`, not downloaded.
-- Only use this for content you own, and at a gentle pace.
+
+## Fair use
+
+Only use this for books you own, for your own reading, at the gentle default pace. The script does nothing a logged-in person can't do by clicking each download link, it leaves the files exactly as Packt serves them, and it never tries to get past a human check: it stops and waits for you. Packt's terms and conditions are the authority on what's allowed, so read them before you run it, and stop if Packt asks you to.
+
+## Development
+
+```powershell
+Invoke-Pester ./tests
+```
+
+The tests (Pester 5+) run [`Update-Manifest.ps1`](tools/Update-Manifest.ps1) and [`New-SetDone.ps1`](tools/New-SetDone.ps1) against small made-up files: complete and cut-off PDFs, EPUBs, a web page saved under a book's name. The browser script and [`Update-CalibreMetadata.ps1`](tools/Update-CalibreMetadata.ps1) aren't covered by them: they need the live site and a Calibre library, and were checked by running them on my own library.
 
 ## How this was built
 
 I'm not a developer. In June 2026 I took Matt Pocock's two-week [AI Coding for Real Engineers](https://www.aihero.dev/cohorts/ai-coding-for-real-engineers-m0k0w) course, and this tool and its two siblings were my first projects afterwards. They were built fully agentically: Claude Code wrote all the code and the docs. My part was choosing the problems, finding out how each store's site works, making the decisions (each design doc records them and why), and testing everything against my own libraries. I followed the course's process, with Matt's [skills](https://github.com/mattpocock/skills) installed in Claude Code.
 
-I built the three between 2026-09-27 and 2026-10-11. Together they've downloaded and checked about 2,550 files, and the Humble and Manning tools have 105 automated tests between them.
+I built the three between 2026-09-27 and 2026-10-12. Together they've downloaded and checked about 2,550 files, and the three have 127 automated tests between them (this tool's were added in November 2026, before publishing).
 
-This was the first, and it's my favorite. It started with me looking for a way to download my own Packt library. I found a Python downloader, but it no longer worked: every one of Packt's endpoints now answered with a Cloudflare bot check. So I set out to build my own. An automated browser couldn't get past the login, so the answer was to run inside my own logged-in tab instead. Then came three different 403 errors, each teaching something about how the site tells scripts from people, and a log that said files were downloading while nothing arrived for 3½ hours. The whole story, dead ends included, is in [how-we-got-here.md](docs/how-we-got-here.md), and the security side in [self-xss.md](docs/self-xss.md). In the end it did the job: 1,091 files came down, all valid.
+This was the first, and it's my favorite. It started with me looking for a way to download my own Packt library. I found a Python downloader, but it no longer worked: every one of Packt's endpoints now answered with a Cloudflare bot check. So I set out to build my own. An automated browser couldn't get past the login, so the answer was to run inside my own logged-in tab instead. Then came three different 403 errors, each teaching something about how the site tells scripts from people, and a log that said files were downloading while nothing arrived for 3½ hours. The whole story, dead ends included, is in [how-we-got-here.md](docs/how-we-got-here.md), and the security side in [self-xss.md](docs/self-xss.md). In the end it did the job: the library holds 1,091 files, all valid (the first full run set out to download 1,079).
 
 The siblings: [humblebundle-downloader](https://github.com/federico-moran/humblebundle-downloader) and [manning-downloader](https://github.com/federico-moran/manning-downloader), both standalone PowerShell scripts with tests.
 
