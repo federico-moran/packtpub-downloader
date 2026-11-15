@@ -75,7 +75,7 @@ This keeps `manifest.csv` inside the download folder, with one row per file: ISB
 
 ## How this was built
 
-I'm not a developer. This year I took Matt Pocock's [AI Coding for Real Engineers](https://www.aihero.dev/cohorts/ai-coding-for-real-engineers-m0k0w) course, and this tool and its two siblings were my first projects afterwards. They were built fully agentically: Claude Code wrote all the code and the docs. My part was choosing the problems, finding out how each store's site works, making the decisions (each design doc records them and why), and testing everything against my own libraries. I followed the course's process, with Matt's [skills](https://github.com/mattpocock/skills) installed in Claude Code.
+I'm not a developer. In June 2026 I took Matt Pocock's two-week [AI Coding for Real Engineers](https://www.aihero.dev/cohorts/ai-coding-for-real-engineers-m0k0w) course, and this tool and its two siblings were my first projects afterwards. They were built fully agentically: Claude Code wrote all the code and the docs. My part was choosing the problems, finding out how each store's site works, making the decisions (each design doc records them and why), and testing everything against my own libraries. I followed the course's process, with Matt's [skills](https://github.com/mattpocock/skills) installed in Claude Code.
 
 I built the three between 2026-09-27 and 2026-10-11. Together they've downloaded and checked about 2,550 files, and the Humble and Manning tools have 105 automated tests between them.
 
