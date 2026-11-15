@@ -1,36 +1,35 @@
 # Case study: this downloader is self-XSS
 
-The downloader works by pasting JavaScript into the DevTools Console of a logged-in page. The technique is **cross-site scripting (XSS)**: code running inside a trusted site's page, with the user's session. It's *self*-XSS because I'm doing it to myself, in my own session. Attackers use the same technique by tricking a victim into pasting their code, a social-engineering attack also known as self-XSS. This note walks through why the two are the same, using what the script actually does, and what defends against it.
+The downloader works by pasting JavaScript into the DevTools Console of a logged-in page. That gives it the same power as **cross-site scripting (XSS)**: code running inside a trusted site's page, with the user's session. Here I'm doing it to my own session, on purpose. Attackers get the same result by tricking a victim into pasting their code, a social-engineering attack known as **self-XSS** ([Wikipedia](https://en.wikipedia.org/wiki/Self-XSS), [Chrome for Developers](https://developer.chrome.com/blog/self-xss)). This note walks through why the two are the same, using what the script actually does, and what defends against it.
 
 ## XSS in one paragraph
 
 Cross-site scripting (XSS) means **an attacker's JavaScript runs inside a trusted site's page**. The browser's same-origin policy normally keeps one site's code away from another site's data. XSS gets around that by putting hostile code *inside* the trusted origin, where it has the same rights as the site's own code: it can read the page, call the site's APIs with the victim's cookies, and act as the victim.
 
-The classic variants differ only in how the code gets in:
+[OWASP](https://owasp.org/www-community/Types_of_Cross-Site_Scripting) describes three types, which differ in how the code gets in:
 
-| Variant | How the attacker's script gets into the page |
+| Type | How the attacker's script gets into the page |
 | --- | --- |
 | Reflected | Injected via a crafted link; the server echoes it back unescaped |
 | Stored | Saved in the site's data (a comment, a profile field) and served to every viewer |
 | DOM-based | The page's own JavaScript writes attacker-controlled input into the DOM unsafely |
-| **Self-XSS** | **The victim pastes it in themselves**, after being tricked |
 
-In the first three the site has a bug. In self-XSS **the site has no bug at all**. The injection point is the user, and the payload lands in exactly the same place with exactly the same power.
+All three are bugs in the site. **Self-XSS isn't one of them:** the site has no bug at all, and the victim pastes the code in themselves, after being tricked. It's social engineering, not a vulnerability, which is why bug bounty programs such as [Google's](https://bughunters.google.com/learn/invalid-reports/web-platform/xss/6496555932319744/do-it-yourself-xss) don't accept reports of it. But the code lands in the same place, with the same power.
 
 ## What the Console gives a script
 
-Code typed in the Console runs *in the page's origin*: same cookies, same storage, same APIs, same CSP. Here is what this project's script does, mapped to the attack capability each step demonstrates:
+Code typed in the Console runs *in the page's origin*: same cookies, same storage, same APIs, and the same Content Security Policy (CSP) limits on where it can send requests. Here is what this project's script does, mapped to the attack capability each step demonstrates:
 
 | What the downloader does | The attacker version |
 | --- | --- |
 | `fetch('/api/entitlements/users/me/owned')` with no login code | Calls any authenticated API as the victim. HttpOnly cookies are sent automatically, even though the script can't read them. |
 | Walks 907 titles and their file lists in about 5 minutes | Enumerates the account's data (orders, messages, documents, contacts) |
 | Opens `/download/...` for 1,079 files | **Bulk data exfiltration**, driven from the victim's own trusted browser and IP |
-| Stores progress in `localStorage` | **Persistence**: data or code that survives page reloads |
+| Stores progress in `localStorage` | Leaves data behind that survives page reloads, for example to track a victim across visits |
 | Opens a second tab with `window.open` | Starts navigations and pop-ups, which CSP `connect-src` does not restrict |
-| Builds a pop-up overlay with a Continue button | **UI redress**: a convincing fake prompt inside the real site ("session expired, re-enter your password") |
+| Builds an overlay with Retry and Skip buttons when a human check appears | **UI redress**: a convincing fake prompt inside the real site ("session expired, re-enter your password") |
 
-An attacker adds only one thing: sending the results to a server they control, and taking harmful actions instead of downloading (changing email/password or payout details, creating API tokens, sending messages).
+An attacker adds two things: sending the results to a server they control, and taking harmful actions instead of downloading (changing email/password or payout details, creating API tokens, sending messages).
 
 ## How victims get talked into it
 
@@ -42,9 +41,9 @@ An attacker adds only one thing: sending the results to a server they control, a
 
 These are the controls that actually affected this project, which makes them good evidence of what works:
 
-1. **Bot management (Cloudflare).** A plain Python/`curl` client got a JavaScript challenge (`cf-mitigated: challenge`, HTTP 403). An automated browser launched by Playwright was caught and stuck in a challenge loop. Only a real user's browser got through, which is exactly why attackers need the victim to run their code.
-2. **Fetch Metadata enforcement.** `/download/<isbn>/<format>` returned **403 to `fetch()`** and to `<a download>` clicks, and only served a real page navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`). A server can use these headers to refuse script-driven requests to sensitive endpoints.
-3. **Behavioral rate limiting.** After roughly 200 downloads, Cloudflare started challenging the download tab, forcing a human back into the loop. Unattended bulk exfiltration stalled for 3½ hours.
+1. **Bot management (Cloudflare).** A plain Python/`curl` client got a JavaScript challenge (`cf-mitigated: challenge`, HTTP 403). An automated browser launched by Playwright got stuck in a challenge loop at login. Only a real user's browser got through, one more reason an attacker would want their code running in the victim's own browser.
+2. **Fetch Metadata enforcement (most likely).** `/download/<isbn>/<format>` returned **403 to `fetch()`** and to `<a download>` clicks, and only served a real page navigation. The likeliest explanation is that the server checks the Fetch Metadata headers the browser adds (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document` for a navigation), which lets it refuse script-driven requests to sensitive endpoints.
+3. **Behavioral rate limiting.** After roughly 200 downloads, Cloudflare started challenging the download tab, forcing a human back into the loop. The unattended run stalled for 3½ hours, which would stall an attacker's bulk exfiltration the same way.
 4. **The browser's paste warning.** Edge refused the first paste until the user typed `allow pasting`, a speed bump aimed directly at self-XSS.
 
 ## Would an EDR catch it?
@@ -53,7 +52,7 @@ Almost certainly not. An EDR (SentinelOne, Defender for Endpoint, CrowdStrike an
 
 | Activity | What the EDR sees | Suspicious? |
 | --- | --- | --- |
-| Pasting and running the script | Nothing. The JavaScript runs inside the browser's page process; the DevTools Console and the page are invisible to the EDR. | — |
+| Pasting and running the script | Normally nothing. The JavaScript runs inside the browser's page process, and what happens in the Console and the page isn't something EDR is built to watch. | — |
 | 907 API calls | `msedge.exe` making HTTPS connections to a legitimate site | No |
 | 1,079 downloads | `msedge.exe` creating `.pdf`/`.epub` files in `Downloads` | No |
 | New processes, code injection, persistence, script engines | None | — |
@@ -115,7 +114,7 @@ Together these close off the two easiest ways for someone else's code to run ins
 **Application**
 
 - **HttpOnly** session cookies. This stops token theft, but not abuse within the session.
-- A strict **CSP `connect-src`**. Console code obeys the page's CSP for `fetch`/XHR, which limits where data can be sent (navigations and some beacons can still leak).
+- A strict **CSP `connect-src`**. Console code obeys the page's CSP for `fetch`/XHR, which limits where data can be sent. Navigations, and requests governed by other directives (images, for example), can still leak it.
 - **Step-up authentication** (password or MFA) for sensitive actions. A pasted script can't answer an MFA prompt.
 - **Fetch Metadata checks** on endpoints that should only be reached by user navigation.
 - **Rate limits and bot management** tuned to human behavior.
@@ -131,6 +130,6 @@ Together these close off the two easiest ways for someone else's code to run ins
 
 ## The one-line lesson
 
-> No legitimate site will ever ask you to paste anything into the browser Console, the Run dialog, or a terminal.
+> Never paste anything into the browser Console, the Run dialog or a terminal because a website or a stranger told you to, unless you understand what it does.
 
-The browser can't tell the difference between *you* running code in your session and *someone else's* code that you ran for them.
+That includes this project: it asks you to paste its script, so read it first. The browser can't tell the difference between *you* running code in your session and *someone else's* code that you ran for them.
