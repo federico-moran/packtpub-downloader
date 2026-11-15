@@ -61,7 +61,7 @@ It runs as a dry run first, then a single-file test, and only then the full run.
 | An `<a download>` link click, used to choose the file name | **403** in Edge ("No permissions") | The `download` attribute changes the request headers and is refused too |
 | `window.open(url)` in a normal tab | **Works** | Only a real page navigation is served |
 
-The server was almost certainly checking **Fetch Metadata headers** (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`), a real defence that lets an endpoint tell script requests from user actions (see [self-xss.md](self-xss.md)). The user's own manual click working was the control case that separated "my script is wrong" from "my session is wrong."
+The server was almost certainly checking **Fetch Metadata headers** (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`), a real defense that lets an endpoint tell script requests from user actions (see [self-xss.md](self-xss.md)). The user's own manual click working was the control case that separated "my script is wrong" from "my session is wrong."
 
 Two smaller problems followed:
 
@@ -88,7 +88,7 @@ Two fixes:
 
 **The first real check showed the pause didn't work.** The check page cuts the link between the library tab and the download tab: it sends a `Cross-Origin-Opener-Policy` header, which puts it in a separate browsing context. The script then couldn't look into the tab at all, read "can't see anything" as "nothing went wrong", and carried on. Each following download opened a *new* tab, each with its own check, until the user had cleared them all and closed the extra tabs. The fix was to treat a tab the script can no longer see like a human check, and to add **Retry** and **Skip** buttons. The earlier version had only been tested for the case the agent expected (a check page it could read), never against a real check.
 
-**Lesson (security):** a script's log is only what it *believed* happened. Timestamps on the actual artefacts showed the real timeline, including the 3½-hour gap.
+**Lesson (security):** a script's log is only what it *believed* happened. Timestamps on the actual artifacts showed the real timeline, including the 3½-hour gap.
 
 **Lesson (agents):** "marked done when started" was a shortcut the agent took knowingly, and it failed exactly as the agent had warned it might. Recording a result as success before it's confirmed is a common source of bugs, whoever writes the code.
 
@@ -108,11 +108,11 @@ With a working tool, the repository was rebuilt as the user's own:
 - Check the assumption everything depends on first (step 0), before fixing anything.
 - Use read-only probes and dry runs before making changes, and one-file tests before full runs.
 - Change code only in response to evidence: every change here followed a specific observed failure.
-- Keep the human in the loop for judgement calls: which approach to take, when to push to GitHub, and passing the human check.
+- Keep the human in the loop for judgment calls: which approach to take, when to push to GitHub, and passing the human check.
 - Review the code before a big run, even when you trust it.
 
 **Security**
 
 - The same Console access that made this tool possible is the self-XSS attack surface.
-- Defences we ran into firsthand: bot management, Fetch Metadata enforcement, behavioural rate limiting, and the browser's paste warning.
+- Defenses we ran into firsthand: bot management, Fetch Metadata enforcement, behavioral rate limiting, and the browser's paste warning.
 - In an investigation, the files and their timestamps are better evidence than what a program says it did.

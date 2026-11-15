@@ -190,7 +190,7 @@ Depends on Part 1 (built) and works best with `packt-library.json` in the folder
 
 - reads the title and author embedded in EPUB and PDF files,
 - can look up metadata and covers by ISBN,
-- organises books as `Author/Title/`,
+- organizes books as `Author/Title/`,
 - syncs to most e-readers.
 
 It can be scripted with `calibredb add` and `ebook-meta`; see the candidate feature [Import into Calibre for the Kindle](#import-into-calibre-for-the-kindle).
