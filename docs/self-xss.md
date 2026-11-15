@@ -38,13 +38,13 @@ An attacker adds only one thing: sending the results to a server they control, a
 - A fake support agent: "open DevTools and run this so we can fix your account."
 - **ClickFix**, the currently common relative: a fake *"verify you are human"* page copies a command to the clipboard and tells the user to press **Win+R**, **Ctrl+V**, **Enter**. The payload then runs in PowerShell on the machine, not just in one site's page. (Note the irony: this project hit the real Cloudflare check many times.)
 
-## What stopped or slowed this script (real defences we ran into)
+## What stopped or slowed this script (real defenses we ran into)
 
 These are the controls that actually affected this project, which makes them good evidence of what works:
 
 1. **Bot management (Cloudflare).** A plain Python/`curl` client got a JavaScript challenge (`cf-mitigated: challenge`, HTTP 403). An automated browser launched by Playwright was caught and stuck in a challenge loop. Only a real user's browser got through, which is exactly why attackers need the victim to run their code.
 2. **Fetch Metadata enforcement.** `/download/<isbn>/<format>` returned **403 to `fetch()`** and to `<a download>` clicks, and only served a real page navigation (`Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document`). A server can use these headers to refuse script-driven requests to sensitive endpoints.
-3. **Behavioural rate limiting.** After roughly 200 downloads, Cloudflare started challenging the download tab, forcing a human back into the loop. Unattended bulk exfiltration stalled for 3½ hours.
+3. **Behavioral rate limiting.** After roughly 200 downloads, Cloudflare started challenging the download tab, forcing a human back into the loop. Unattended bulk exfiltration stalled for 3½ hours.
 4. **The browser's paste warning.** Edge refused the first paste until the user typed `allow pasting`, a speed bump aimed directly at self-XSS.
 
 ## Would an EDR catch it?
@@ -63,7 +63,7 @@ EDR detections are built on things like a process launching something unexpected
 - **scan the downloaded files** as they're written (a malicious PDF could be caught there), and
 - **record file-creation events in its telemetry,** where a hunt might spot one browser process writing ~1,000 files in two hours. That's a hunt, not an alert.
 
-**The attacker's version is also mostly invisible.** A self-XSS payload that sends account data to an attacker's server is, to the endpoint, just the browser making another HTTPS request. The EDR might flag the destination through threat intelligence, but not the behaviour. That is a large part of why browser-only attacks appeal to attackers: they stay under the EDR. The trade-off is that the attacker is limited to what that one site allows.
+**The attacker's version is also mostly invisible.** A self-XSS payload that sends account data to an attacker's server is, to the endpoint, just the browser making another HTTPS request. The EDR might flag the destination through threat intelligence, but not the behavior. That is a large part of why browser-only attacks appeal to attackers: they stay under the EDR. The trade-off is that the attacker is limited to what that one site allows.
 
 **ClickFix is different.** Once the victim pastes into the Run dialog, the attack leaves the browser:
 
@@ -80,7 +80,7 @@ An unusual parent/child process chain, an encoded command line, and a newly writ
 - **Manage the browser as a platform.** Enforce policy through Group Policy or Intune (Edge for Business, Chrome Enterprise): approved browsers only, forced updates, sign-in tied to corporate identity.
 - **Control DevTools.** Set `DeveloperToolsAvailability = 2` for everyone except groups that need it (developers, IT). This removes the Console-paste attack path for most users.
 - **Control extensions.** Use an allowlist (`ExtensionInstallAllowlist` with `ExtensionInstallBlocklist = *`) and review extension permissions. A malicious extension has the same in-page power as a pasted script, permanently.
-- **Watch what happens inside the page.** Browser security tools (security extensions or enterprise browsers) can see script behaviour, pastes, data leaving the page and risky sites, which EDR can't.
+- **Watch what happens inside the page.** Browser security tools (security extensions or enterprise browsers) can see script behavior, pastes, data leaving the page and risky sites, which EDR can't.
 - **Network and data layer.** A secure web gateway or SSE/CASB for URL filtering, DLP on uploads, and download limits for sanctioned apps.
 - **Identity layer.** Conditional access (managed device, compliant browser), short session lifetimes, re-authentication for sensitive actions, and token protection or device-bound sessions where supported.
 - **Users.** Teach the one-line lesson below, and include ClickFix-style fake CAPTCHAs in phishing simulations.
@@ -103,7 +103,7 @@ An unusual parent/child process chain, an encoded command line, and a newly writ
 
 Together these close off the two easiest ways for someone else's code to run inside a user's logged-in session: a pasted script and an installed extension.
 
-## Defences, by layer
+## Defenses, by layer
 
 **Browser / endpoint**
 
@@ -118,7 +118,7 @@ Together these close off the two easiest ways for someone else's code to run ins
 - A strict **CSP `connect-src`**. Console code obeys the page's CSP for `fetch`/XHR, which limits where data can be sent (navigations and some beacons can still leak).
 - **Step-up authentication** (password or MFA) for sensitive actions. A pasted script can't answer an MFA prompt.
 - **Fetch Metadata checks** on endpoints that should only be reached by user navigation.
-- **Rate limits and bot management** tuned to human behaviour.
+- **Rate limits and bot management** tuned to human behavior.
 - Device Bound Session Credentials limit cookie *replay* elsewhere, but not abuse inside the victim's browser.
 
 **Detection ideas**
