@@ -1,5 +1,7 @@
 # PacktPub Downloader
 
+[![Tests](https://github.com/federico-moran/packtpub-downloader/actions/workflows/tests.yml/badge.svg)](https://github.com/federico-moran/packtpub-downloader/actions/workflows/tests.yml)
+
 > Built by a non-developer, fully agentically, after taking Matt Pocock's course: [see how](#how-this-was-built).
 
 Downloads every ebook you own on [PacktPub](https://subscription.packtpub.com) (PDF and/or EPUB), from inside your own logged-in browser session.
