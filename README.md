@@ -1,5 +1,7 @@
 # PacktPub Downloader
 
+> Built by a non-developer, fully agentically, after taking Matt Pocock's course: [see how](#how-this-was-built).
+
 Downloads every ebook you own on [PacktPub](https://subscription.packtpub.com) (PDF and/or EPUB), from inside your own logged-in browser session.
 
 It is also a small case study in **self-XSS**: the same technique that makes this script work is what attackers use when they talk a victim into pasting code into their browser. See [docs/self-xss.md](docs/self-xss.md). For the story of how it was built, dead ends included, see [docs/how-we-got-here.md](docs/how-we-got-here.md).
@@ -71,6 +73,22 @@ This keeps `manifest.csv` inside the download folder, with one row per file: ISB
 - Code bundles hosted on GitHub are listed in `packt-library.json`, not downloaded.
 - Only use this for content you own, and at a gentle pace.
 
+## How this was built
+
+I'm not a developer. This year I took Matt Pocock's [AI Coding for Real Engineers](https://www.aihero.dev/cohorts/ai-coding-for-real-engineers-m0k0w) course, and this tool and its two siblings were my first projects afterwards. They were built fully agentically: Claude Code wrote all the code and the docs. My part was choosing the problems, finding out how each store's site works, making the decisions (each design doc records them and why), and testing everything against my own libraries. I followed the course's process, with Matt's [skills](https://github.com/mattpocock/skills) installed in Claude Code.
+
+I built the three between 2026-09-27 and 2026-10-11. Together they've downloaded and checked about 2,550 files, and the Humble and Manning tools have 105 automated tests between them.
+
+This was the first, and it's my favourite. It started as a fix for someone else's Python downloader that had stopped working, and turned into something else entirely when every one of Packt's endpoints answered with a Cloudflare bot check. An automated browser couldn't get past the login, so the answer was to run inside my own logged-in tab instead. Then came three different 403 errors, each teaching something about how the site tells scripts from people, and a log that said files were downloading while nothing arrived for 3½ hours. The whole story, dead ends included, is in [how-we-got-here.md](docs/how-we-got-here.md), and the security side in [self-xss.md](docs/self-xss.md). 1,091 files came down, all valid.
+
+The siblings: [humblebundle-downloader](https://github.com/federico-moran/humblebundle-downloader) and [manning-downloader](https://github.com/federico-moran/manning-downloader), both standalone PowerShell scripts with tests.
+
+A personal project: issues are welcome, but fixes aren't promised. Not affiliated with or endorsed by Matt Pocock, AI Hero, PacktPub, Humble Bundle or Manning.
+
 ## Credits
 
-Original Python downloader by [lmbringas](https://github.com/lmbringas/packtpub-downloader), inspired by [ozzieperez/packtpub-library-downloader](https://github.com/ozzieperez/packtpub-library-downloader). This rewrite was built with an AI coding agent (Claude Code).
+Original Python downloader by [lmbringas](https://github.com/lmbringas/packtpub-downloader), inspired by [ozzieperez/packtpub-library-downloader](https://github.com/ozzieperez/packtpub-library-downloader). No code from either remains.
+
+## License
+
+[MIT](LICENSE)
