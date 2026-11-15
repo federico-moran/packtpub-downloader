@@ -1,6 +1,6 @@
-# Case study: this downloader uses the XSS technique
+# Case study: this downloader is self-XSS
 
-The downloader works by pasting JavaScript into the DevTools Console of a logged-in page. That is the technique behind **cross-site scripting (XSS)**: code running inside a trusted site's page, with the user's session. Getting it there by pasting is the variant called **self-XSS**, a social-engineering attack in which the victim is tricked into pasting the attacker's code. This note walks through why, using what the script actually does, and what defends against it.
+The downloader works by pasting JavaScript into the DevTools Console of a logged-in page. The technique is **cross-site scripting (XSS)**: code running inside a trusted site's page, with the user's session. It's *self*-XSS because I'm doing it to myself, in my own session. Attackers use the same technique by tricking a victim into pasting their code, a social-engineering attack also known as self-XSS. This note walks through why the two are the same, using what the script actually does, and what defends against it.
 
 ## XSS in one paragraph
 
