@@ -8,3 +8,7 @@ packt-library*.json
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Personal Claude Code files: your own notes and permissions, not shared
+CLAUDE.local.md
+.claude/settings.local.json
